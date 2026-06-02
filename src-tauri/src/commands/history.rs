@@ -1,7 +1,9 @@
-// This file will contain Tauri commands exposed to the frontend for history operations.
-// For example: #[tauri::command] pub fn get_history() -> Result<Vec<HistoryItem>, String> { ... }
+use crate::errors::CalculatorError;
+use crate::models::history::HistoryItem;
+use crate::storage::history_store::load_history;
+use tauri::AppHandle;
 
 #[tauri::command]
-pub fn get_history() -> Result<Vec<String>, String> {
-    Ok(vec![])
+pub fn get_history(app_handle: AppHandle) -> Result<Vec<HistoryItem>, CalculatorError> {
+    load_history(&app_handle)
 }
