@@ -2,6 +2,7 @@ import { Settings2, Keyboard, Database, Info } from "lucide-solid";
 import { createSignal, JSX, Show, For } from "solid-js";
 import { Dynamic } from "solid-js/web";
 import { cn } from "../utils/cn";
+import { createLocalStorage } from "../utils/createLocalStorage";
 
 const categories = [
   { id: "general", name: "General", icon: Settings2 },
@@ -12,6 +13,7 @@ const categories = [
 
 export function SettingsScreen() {
   const [activeTab, setActiveTab] = createSignal("general");
+  const [retentionDays, setRetentionDays] = createLocalStorage<number>("archcalc_history_retention", 30);
 
   return (
     <div class="flex h-full max-w-5xl mx-auto w-full">
@@ -68,11 +70,15 @@ export function SettingsScreen() {
                   title="History retention" 
                   description="How long to keep your calculation history."
                   control={
-                    <select class="bg-[var(--color-app-surface-secondary)] border border-[var(--color-app-border)] rounded-lg px-3 py-1.5 text-sm outline-none text-[var(--color-app-text-primary)]">
-                      <option>7 days</option>
-                      <option>30 days</option>
-                      <option>90 days</option>
-                      <option>Forever</option>
+                    <select 
+                      value={retentionDays()}
+                      onChange={(e) => setRetentionDays(Number(e.currentTarget.value))}
+                      class="bg-[var(--color-app-surface-secondary)] border border-[var(--color-app-border)] rounded-lg px-3 py-1.5 text-sm outline-none text-[var(--color-app-text-primary)]"
+                    >
+                      <option class="bg-[var(--color-app-surface)] text-[var(--color-app-text-primary)]" value={7}>7 days</option>
+                      <option class="bg-[var(--color-app-surface)] text-[var(--color-app-text-primary)]" value={30}>30 days</option>
+                      <option class="bg-[var(--color-app-surface)] text-[var(--color-app-text-primary)]" value={90}>90 days</option>
+                      <option class="bg-[var(--color-app-surface)] text-[var(--color-app-text-primary)]" value={0}>Forever</option>
                     </select>
                   }
                 />

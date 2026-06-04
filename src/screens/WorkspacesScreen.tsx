@@ -1,4 +1,4 @@
-import { FileText, Plus, Save, Play, Trash } from "lucide-solid";
+import { FileText, Plus, Save, Play, Trash, X } from "lucide-solid";
 import { For, createSignal, createEffect, Show } from "solid-js";
 import { cn } from "../utils/cn";
 import { createLocalStorage } from "../utils/createLocalStorage";
@@ -26,10 +26,23 @@ export function WorkspacesScreen() {
 
   const activeWorkspace = () => workspaces().find(w => w.id === activeId());
 
+  const [showModal, setShowModal] = createSignal(false);
+  const [newWorkspaceName, setNewWorkspaceName] = createSignal("");
+  let nameInputRef!: HTMLInputElement;
+
   const addWorkspace = () => {
+    setNewWorkspaceName("");
+    setShowModal(true);
+    setTimeout(() => nameInputRef?.focus(), 50);
+  };
+
+  const confirmAddWorkspace = (e?: Event) => {
+    if (e) e.preventDefault();
+    if (!newWorkspaceName().trim()) return;
     const newId = crypto.randomUUID();
-    setWorkspaces([...workspaces(), { id: newId, name: "New Workspace", content: "" }]);
+    setWorkspaces([...workspaces(), { id: newId, name: newWorkspaceName().trim(), content: "" }]);
     setActiveId(newId);
+    setShowModal(false);
   };
 
   const removeWorkspace = (id: string, e: Event) => {
@@ -194,6 +207,52 @@ export function WorkspacesScreen() {
                 </For>
               </div>
             </div>
+          </div>
+        </div>
+      </Show>
+
+      {/* Modal Overlay */}
+      <Show when={showModal()}>
+        <div class="fixed inset-0 z-50 bg-black/50 backdrop-blur-sm flex items-center justify-center p-4">
+          <div class="bg-[var(--color-app-surface)] border border-[var(--color-app-border)] rounded-xl w-full max-w-sm shadow-2xl overflow-hidden animate-in fade-in zoom-in-95 duration-200">
+            <div class="flex items-center justify-between p-4 border-b border-[var(--color-app-border)]">
+              <h3 class="font-semibold text-[var(--color-app-text-primary)]">New Workspace</h3>
+              <button 
+                onClick={() => setShowModal(false)}
+                class="text-[var(--color-app-text-secondary)] hover:text-[var(--color-app-text-primary)] transition-colors p-1 rounded-md hover:bg-[var(--color-app-surface-secondary)]"
+              >
+                <X size={16} />
+              </button>
+            </div>
+            <form onSubmit={confirmAddWorkspace} class="p-4 space-y-4">
+              <div class="space-y-2">
+                <label class="text-sm font-medium text-[var(--color-app-text-secondary)]">Workspace Name</label>
+                <input 
+                  ref={nameInputRef}
+                  type="text" 
+                  value={newWorkspaceName()}
+                  onInput={(e) => setNewWorkspaceName(e.currentTarget.value)}
+                  placeholder="e.g. Personal Budget"
+                  class="w-full bg-[var(--color-app-surface-secondary)] border border-[var(--color-app-border)] rounded-lg px-3 py-2 text-sm text-[var(--color-app-text-primary)] placeholder-[var(--color-app-text-secondary)] focus:outline-none focus:border-[var(--color-app-accent)]"
+                />
+              </div>
+              <div class="flex items-center justify-end gap-2 pt-2">
+                <button 
+                  type="button"
+                  onClick={() => setShowModal(false)}
+                  class="px-4 py-2 rounded-lg text-sm font-medium text-[var(--color-app-text-secondary)] hover:text-[var(--color-app-text-primary)] hover:bg-[var(--color-app-surface-secondary)] transition-colors"
+                >
+                  Cancel
+                </button>
+                <button 
+                  type="submit"
+                  disabled={!newWorkspaceName().trim()}
+                  class="px-4 py-2 rounded-lg text-sm font-medium bg-[var(--color-app-accent)] text-white hover:bg-[var(--color-app-accent)]/90 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                >
+                  Create
+                </button>
+              </div>
+            </form>
           </div>
         </div>
       </Show>

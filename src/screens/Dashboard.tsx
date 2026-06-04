@@ -24,6 +24,7 @@ export function Dashboard() {
   
   const [history, setHistory] = createLocalStorage<HistoryItem[]>("archcalc_history", []);
   const [historyIndex, setHistoryIndex] = createSignal(-1);
+  const [retentionDays] = createLocalStorage<number>("archcalc_history_retention", 30);
 
   onMount(() => {
     inputRef?.focus();
@@ -70,7 +71,15 @@ export function Dashboard() {
         time: now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
         timestamp: now.getTime()
       };
-      setHistory([newItem, ...h]);
+      
+      const retention = retentionDays();
+      let newHistory = [newItem, ...h];
+      if (retention > 0) {
+        const cutoff = now.getTime() - (retention * 24 * 60 * 60 * 1000);
+        newHistory = newHistory.filter(item => item.timestamp > cutoff);
+      }
+      
+      setHistory(newHistory);
       setQuery("");
       setHistoryIndex(-1);
     } else if (e.key === "ArrowUp") {

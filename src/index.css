@@ -16,6 +16,9 @@
 }
 
 @layer base {
+  :root {
+    color-scheme: dark;
+  }
   body {
     background-color: var(--color-app-bg);
     color: var(--color-app-text-primary);

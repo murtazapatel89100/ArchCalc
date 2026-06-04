@@ -104,7 +104,7 @@ export function ConverterScreen() {
                 class="bg-[var(--color-app-surface-secondary)] border border-[var(--color-app-border)] rounded-lg px-3 py-2 text-sm text-[var(--color-app-text-primary)] focus:outline-none focus:ring-1 focus:ring-[var(--color-app-accent)]/50 outline-none w-full uppercase"
               >
                 <For each={activeCategory().units}>
-                  {(u) => <option value={u}>{u}</option>}
+                  {(u) => <option class="bg-[var(--color-app-surface)] text-[var(--color-app-text-primary)]" value={u}>{u}</option>}
                 </For>
               </select>
               <input 
@@ -134,7 +134,7 @@ export function ConverterScreen() {
                 class="bg-[var(--color-app-surface-secondary)] border border-[var(--color-app-border)] rounded-lg px-3 py-2 text-sm text-[var(--color-app-text-primary)] focus:outline-none focus:ring-1 focus:ring-[var(--color-app-accent)]/50 outline-none w-full uppercase"
               >
                 <For each={activeCategory().units}>
-                  {(u) => <option value={u}>{u}</option>}
+                  {(u) => <option class="bg-[var(--color-app-surface)] text-[var(--color-app-text-primary)]" value={u}>{u}</option>}
                 </For>
               </select>
               <div class="text-4xl font-mono text-[var(--color-app-accent)] py-2 border-b border-transparent truncate">
