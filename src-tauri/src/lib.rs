@@ -14,10 +14,12 @@ pub mod storage;
 pub fn run() {
     tauri::Builder::default()
         .plugin(tauri_plugin_opener::init())
+        .manage(commands::system::SystemState::new())
         .invoke_handler(tauri::generate_handler![
             greet,
             commands::calculator::evaluate,
-            commands::history::get_history
+            commands::history::get_history,
+            commands::system::get_system_info
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

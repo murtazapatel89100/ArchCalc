@@ -1,38 +1,138 @@
-import { FileText, Plus, Save, Play } from "lucide-solid";
-import { For } from "solid-js";
+import { FileText, Plus, Save, Play, Trash } from "lucide-solid";
+import { For, createSignal, createEffect, Show } from "solid-js";
 import { cn } from "../utils/cn";
+import { createLocalStorage } from "../utils/createLocalStorage";
+import { evaluator } from "../utils/evaluator";
 
-const workspaces = [
-  { id: 1, name: "Personal Budget", active: true },
-  { id: 2, name: "Business Expenses", active: false },
-  { id: 3, name: "Tax Planning 2024", active: false },
-  { id: 4, name: "Project Estimate", active: false },
-];
+interface Workspace {
+  id: string;
+  name: string;
+  content: string;
+}
+
+interface LiveResult {
+  lineIndex: number;
+  variable?: string;
+  value: string;
+  isError: boolean;
+}
 
 export function WorkspacesScreen() {
+  const [workspaces, setWorkspaces] = createLocalStorage<Workspace[]>("archcalc_workspaces", [
+    { id: "1", name: "Personal Budget", content: "salary = 50000\nrent = 12000\nfood = 5000\n// Calculate remaining\nremaining = salary - rent - food" }
+  ]);
+  const [activeId, setActiveId] = createSignal<string>("1");
+  const [results, setResults] = createSignal<LiveResult[]>([]);
+
+  const activeWorkspace = () => workspaces().find(w => w.id === activeId());
+
+  const addWorkspace = () => {
+    const newId = crypto.randomUUID();
+    setWorkspaces([...workspaces(), { id: newId, name: "New Workspace", content: "" }]);
+    setActiveId(newId);
+  };
+
+  const removeWorkspace = (id: string, e: Event) => {
+    e.stopPropagation();
+    const filtered = workspaces().filter(w => w.id !== id);
+    setWorkspaces(filtered);
+    if (activeId() === id) {
+      setActiveId(filtered.length > 0 ? filtered[0].id : "");
+    }
+  };
+
+  const updateContent = (content: string) => {
+    const w = activeWorkspace();
+    if (!w) return;
+    setWorkspaces(workspaces().map(ws => ws.id === w.id ? { ...ws, content } : ws));
+  };
+
+  const updateName = (name: string) => {
+    const w = activeWorkspace();
+    if (!w) return;
+    setWorkspaces(workspaces().map(ws => ws.id === w.id ? { ...ws, name } : ws));
+  };
+
+  // Evaluate lines whenever content changes
+  createEffect(() => {
+    const w = activeWorkspace();
+    if (!w) {
+      setResults([]);
+      return;
+    }
+    
+    const lines = w.content.split('\n');
+    const newResults: LiveResult[] = [];
+    const context: Record<string, number> = {};
+
+    lines.forEach((line, i) => {
+      const trimmed = line.trim();
+      if (!trimmed || trimmed.startsWith('//')) return;
+
+      try {
+        let varName: string | undefined;
+        let exprToEval = trimmed;
+
+        // Check for assignment: var = expression
+        const assignMatch = trimmed.match(/^([a-zA-Z_]\w*)\s*=\s*(.*)$/);
+        if (assignMatch) {
+          varName = assignMatch[1];
+          exprToEval = assignMatch[2];
+        }
+
+        const valStr = evaluator.math(exprToEval, context);
+        const valNum = parseFloat(valStr);
+
+        if (varName && !isNaN(valNum)) {
+          context[varName] = valNum;
+        }
+
+        newResults.push({
+          lineIndex: i,
+          variable: varName,
+          value: parseFloat(valNum.toPrecision(12)).toLocaleString("en-US", { maximumFractionDigits: 4 }),
+          isError: false
+        });
+      } catch (err) {
+        // Skip errors or mark them
+      }
+    });
+
+    setResults(newResults);
+  });
+
   return (
     <div class="flex h-full w-full">
       {/* Workspace Sidebar */}
       <div class="w-64 border-r border-[var(--color-app-border)] bg-[var(--color-app-surface)]/50 flex flex-col">
         <div class="p-4 flex items-center justify-between border-b border-[var(--color-app-border)]">
           <span class="font-semibold text-sm text-[var(--color-app-text-primary)]">Workspaces</span>
-          <button class="text-[var(--color-app-text-secondary)] hover:text-[var(--color-app-accent)] transition-colors p-1 hover:bg-[var(--color-app-accent)]/10 rounded">
+          <button onClick={addWorkspace} class="text-[var(--color-app-text-secondary)] hover:text-[var(--color-app-accent)] transition-colors p-1 hover:bg-[var(--color-app-accent)]/10 rounded">
             <Plus size={16} />
           </button>
         </div>
         <div class="flex-1 overflow-y-auto p-2 space-y-1">
-          <For each={workspaces}>
+          <For each={workspaces()}>
             {(ws) => (
               <button
+                onClick={() => setActiveId(ws.id)}
                 class={cn(
-                  "w-full flex items-center gap-2 px-3 py-2 text-sm rounded-md transition-colors text-left",
-                  ws.active 
+                  "w-full flex items-center justify-between px-3 py-2 text-sm rounded-md transition-colors text-left group",
+                  ws.id === activeId()
                     ? "bg-[var(--color-app-accent)]/10 text-[var(--color-app-accent)] font-medium" 
                     : "text-[var(--color-app-text-secondary)] hover:bg-[var(--color-app-surface-secondary)] hover:text-[var(--color-app-text-primary)]"
                 )}
               >
-                <FileText size={14} class={ws.active ? "text-[var(--color-app-accent)]" : "text-[var(--color-app-text-secondary)]"} />
-                <span class="truncate">{ws.name}</span>
+                <div class="flex items-center gap-2 overflow-hidden">
+                  <FileText size={14} class={ws.id === activeId() ? "text-[var(--color-app-accent)]" : "text-[var(--color-app-text-secondary)]"} />
+                  <span class="truncate">{ws.name}</span>
+                </div>
+                <div 
+                  onClick={(e) => removeWorkspace(ws.id, e)}
+                  class="opacity-0 group-hover:opacity-100 p-1 hover:text-[var(--color-app-error)] transition-colors rounded-md"
+                >
+                  <Trash size={12} />
+                </div>
               </button>
             )}
           </For>
@@ -40,78 +140,63 @@ export function WorkspacesScreen() {
       </div>
 
       {/* Editor Area */}
-      <div class="flex-1 flex flex-col min-w-0">
-        <div class="h-12 border-b border-[var(--color-app-border)] flex items-center justify-between px-4 bg-[var(--color-app-bg)]">
-          <div class="flex items-center gap-2">
-            <span class="font-mono text-sm text-[var(--color-app-text-secondary)]">workspace / </span>
-            <span class="font-medium text-sm text-[var(--color-app-text-primary)]">Personal Budget</span>
-          </div>
-          <div class="flex items-center gap-2">
-            <div class="flex items-center gap-1 text-xs text-[var(--color-app-text-secondary)] mr-4">
-              <span class="w-2 h-2 rounded-full bg-[var(--color-app-success)]/80"></span>
-              Autosaved
-            </div>
-            <button class="flex items-center gap-1.5 px-3 py-1.5 bg-[var(--color-app-accent)] text-white rounded-md text-xs font-medium hover:bg-[var(--color-app-accent)]/90 transition-colors shadow-sm">
-              <Play size={12} />
-              Run All
-            </button>
-          </div>
+      <Show when={activeWorkspace()} fallback={
+        <div class="flex-1 flex items-center justify-center text-[var(--color-app-text-secondary)]">
+          No workspace selected
         </div>
-
-        <div class="flex-1 flex overflow-hidden bg-[var(--color-app-bg)]">
-          {/* Editor */}
-          <div class="flex-1 p-6 overflow-y-auto font-mono text-[14px] leading-relaxed relative">
-            <div class="absolute left-0 top-0 bottom-0 w-12 bg-[var(--color-app-surface-secondary)]/20 border-r border-[var(--color-app-border)] flex flex-col items-center py-6 text-[var(--color-app-text-secondary)]/50 text-xs font-mono select-none">
-              <span>1</span>
-              <span>2</span>
-              <span>3</span>
-              <span>4</span>
-              <span>5</span>
-              <span>6</span>
-              <span>7</span>
-              <span>8</span>
+      }>
+        <div class="flex-1 flex flex-col min-w-0">
+          <div class="h-12 border-b border-[var(--color-app-border)] flex items-center justify-between px-4 bg-[var(--color-app-bg)]">
+            <div class="flex items-center gap-2">
+              <span class="font-mono text-sm text-[var(--color-app-text-secondary)]">workspace / </span>
+              <input 
+                type="text" 
+                value={activeWorkspace()?.name || ""}
+                onInput={(e) => updateName(e.currentTarget.value)}
+                class="bg-transparent font-medium text-sm text-[var(--color-app-text-primary)] focus:outline-none focus:border-b focus:border-[var(--color-app-accent)]"
+              />
             </div>
-            <div class="pl-10 outline-none text-[var(--color-app-text-primary)]" contentEditable={true}>
-              <div class="text-[var(--color-app-accent)] font-medium">salary = 50000</div>
-              <br />
-              <div>rent = 12000</div>
-              <br />
-              <div>food = 5000</div>
-              <br />
-              <div><span class="text-[var(--color-app-text-secondary)]">// Calculate remaining</span></div>
-              <div class="text-[var(--color-app-warning)]">remaining = salary - rent - food</div>
+            <div class="flex items-center gap-2">
+              <div class="flex items-center gap-1 text-xs text-[var(--color-app-text-secondary)] mr-4">
+                <span class="w-2 h-2 rounded-full bg-[var(--color-app-success)]/80"></span>
+                Autosaved
+              </div>
             </div>
           </div>
 
-          {/* Live Results Panel */}
-          <div class="w-80 border-l border-[var(--color-app-border)] bg-[var(--color-app-surface)]/30 p-6 overflow-y-auto font-mono text-[14px] leading-relaxed">
-            <div class="text-[var(--color-app-text-secondary)] mb-4 text-xs uppercase tracking-wider font-sans font-semibold">Live Results</div>
-            <div class="space-y-6">
-              <div class="flex items-center justify-between group">
-                <span class="text-[var(--color-app-text-secondary)]/70">salary</span>
-                <span class="text-[var(--color-app-text-primary)] font-medium">50,000</span>
+          <div class="flex-1 flex overflow-hidden bg-[var(--color-app-bg)]">
+            {/* Editor */}
+            <div class="flex-1 p-6 relative font-mono text-[14px] leading-relaxed flex">
+              <div class="w-12 bg-[var(--color-app-surface-secondary)]/20 border-r border-[var(--color-app-border)] flex flex-col items-center pt-2 text-[var(--color-app-text-secondary)]/50 text-xs font-mono select-none">
+                <For each={activeWorkspace()?.content.split('\n')}>
+                  {(_, i) => <span>{i() + 1}</span>}
+                </For>
               </div>
-              
-              <div class="flex items-center justify-between group">
-                <span class="text-[var(--color-app-text-secondary)]/70">rent</span>
-                <span class="text-[var(--color-app-text-primary)] font-medium">12,000</span>
-              </div>
-              
-              <div class="flex items-center justify-between group">
-                <span class="text-[var(--color-app-text-secondary)]/70">food</span>
-                <span class="text-[var(--color-app-text-primary)] font-medium">5,000</span>
-              </div>
-              
-              <div class="h-px bg-[var(--color-app-border)]/50 my-2"></div>
-              
-              <div class="flex items-center justify-between group">
-                <span class="text-[var(--color-app-accent)] font-medium">remaining</span>
-                <span class="text-[var(--color-app-success)] font-semibold text-lg">33,000</span>
+              <textarea
+                class="flex-1 h-full resize-none bg-transparent text-[var(--color-app-text-primary)] pl-4 pt-1 outline-none leading-relaxed whitespace-pre"
+                value={activeWorkspace()?.content || ""}
+                onInput={(e) => updateContent(e.currentTarget.value)}
+                spellcheck={false}
+              />
+            </div>
+
+            {/* Live Results Panel */}
+            <div class="w-80 border-l border-[var(--color-app-border)] bg-[var(--color-app-surface)]/30 p-6 overflow-y-auto font-mono text-[14px] leading-relaxed">
+              <div class="text-[var(--color-app-text-secondary)] mb-4 text-xs uppercase tracking-wider font-sans font-semibold">Live Results</div>
+              <div class="space-y-6">
+                <For each={results()}>
+                  {(res) => (
+                    <div class="flex items-center justify-between group border-b border-[var(--color-app-border)]/50 pb-2">
+                      <span class="text-[var(--color-app-text-secondary)]/70">{res.variable || `Line ${res.lineIndex + 1}`}</span>
+                      <span class="text-[var(--color-app-accent)] font-medium text-lg">{res.value}</span>
+                    </div>
+                  )}
+                </For>
               </div>
             </div>
           </div>
         </div>
-      </div>
+      </Show>
     </div>
   );
 }

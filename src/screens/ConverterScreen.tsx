@@ -96,7 +96,7 @@ export function ConverterScreen() {
         <div class="grid grid-cols-[1fr_auto_1fr] gap-6 items-center">
           
           <div class="space-y-3">
-            <label class="text-xs font-medium text-[var(--color-app-text-secondary)] uppercase tracking-wider">From</label>
+            <label class="text-xs font-medium text-[var(--color-app-text-primary)] uppercase tracking-wider">From</label>
             <div class="flex flex-col gap-2">
               <select 
                 value={fromUnit()}
@@ -126,7 +126,7 @@ export function ConverterScreen() {
           </div>
 
           <div class="space-y-3">
-            <label class="text-xs font-medium text-[var(--color-app-text-secondary)] uppercase tracking-wider">To</label>
+            <label class="text-xs font-medium text-[var(--color-app-text-primary)] uppercase tracking-wider">To</label>
             <div class="flex flex-col gap-2">
               <select 
                 value={toUnit()}

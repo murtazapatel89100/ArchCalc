@@ -115,19 +115,10 @@ export function Dashboard() {
       {/* Topbar */}
       <header class="h-14 flex items-center justify-between px-6 border-b border-[var(--color-app-border)] bg-[var(--color-app-surface)]/50 backdrop-blur-md sticky top-0 z-10">
         <div class="flex items-center gap-3">
-           <div class="w-7 h-7 rounded bg-gradient-to-br from-[var(--color-app-accent)] to-blue-600 flex items-center justify-center text-white shadow-lg shadow-[var(--color-app-accent)]/20">
-             <Command size={14} />
-           </div>
+           <img src="/logo.png" alt="ArchCalc" class="w-7 h-7 rounded object-contain shadow-lg shadow-[var(--color-app-accent)]/20 bg-[var(--color-app-surface)]" />
            <span class="font-semibold text-[var(--color-app-text-primary)]">ArchCalc</span>
         </div>
-        
         <div class="flex-1 max-w-md mx-6 hidden md:block relative">
-          <Search size={14} class="absolute left-3 top-1/2 -translate-y-1/2 text-[var(--color-app-text-secondary)]" />
-          <input 
-            type="text" 
-            placeholder="Quick search... (Press '/')"
-            class="w-full bg-[var(--color-app-surface-secondary)] border border-[var(--color-app-border)] rounded-full py-1.5 pl-9 pr-4 text-sm text-[var(--color-app-text-primary)] focus:outline-none focus:border-[var(--color-app-accent)]/50 transition-colors placeholder-[var(--color-app-text-secondary)]/50"
-          />
         </div>
 
         <div class="flex items-center gap-2 text-[var(--color-app-text-secondary)]">
