@@ -121,14 +121,6 @@ export function Dashboard() {
         <div class="flex-1 max-w-md mx-6 hidden md:block relative">
         </div>
 
-        <div class="flex items-center gap-2 text-[var(--color-app-text-secondary)]">
-          <button class="p-2 rounded-lg hover:bg-[var(--color-app-surface-secondary)] hover:text-[var(--color-app-text-primary)] transition-colors">
-            <Moon size={18} />
-          </button>
-          <button class="p-2 rounded-lg hover:bg-[var(--color-app-surface-secondary)] hover:text-[var(--color-app-text-primary)] transition-colors">
-            <Settings size={18} />
-          </button>
-        </div>
       </header>
 
       {/* Main Content */}
