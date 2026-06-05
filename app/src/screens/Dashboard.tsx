@@ -99,6 +99,10 @@ export function Dashboard() {
         setHistoryIndex(-1);
         setQuery("");
       }
+    } else if (e.key === "Escape") {
+      e.preventDefault();
+      setQuery("");
+      setHistoryIndex(-1);
     }
   };
 

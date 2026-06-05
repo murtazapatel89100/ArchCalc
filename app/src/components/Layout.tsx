@@ -1,5 +1,5 @@
-import { createSignal, JSX } from "solid-js";
-import { A, useLocation } from "@solidjs/router";
+import { createSignal, JSX, onMount, onCleanup } from "solid-js";
+import { A, useLocation, useNavigate } from "@solidjs/router";
 import { 
   Calculator, 
   Hash,
@@ -12,6 +12,7 @@ import {
   Menu,
 } from "lucide-solid";
 import { cn } from "../utils/cn";
+import { createLocalStorage } from "../utils/createLocalStorage";
 
 const navItems = [
   { icon: Calculator, label: "Dashboard", path: "/" },
@@ -27,6 +28,22 @@ const navItems = [
 export function Layout(props: { children?: JSX.Element }) {
   const [isSidebarOpen, setIsSidebarOpen] = createSignal(true);
   const location = useLocation();
+  const navigate = useNavigate();
+  const [workspaceTitle] = createLocalStorage("archcalc_workspace_title", "Dev Workspace");
+  const [workspaceSubtitle] = createLocalStorage("archcalc_workspace_subtitle", "Local Environment");
+  const [workspaceImage] = createLocalStorage("archcalc_workspace_image", "");
+
+  onMount(() => {
+    const handleGlobalKey = (e: KeyboardEvent) => {
+      // Ctrl + Space to open command palette / dashboard
+      if (e.ctrlKey && e.code === "Space") {
+        e.preventDefault();
+        navigate("/");
+      }
+    };
+    window.addEventListener("keydown", handleGlobalKey);
+    onCleanup(() => window.removeEventListener("keydown", handleGlobalKey));
+  });
 
   return (
     <div class="flex h-screen w-full bg-[var(--color-app-bg)] text-[var(--color-app-text-primary)] overflow-hidden font-sans selection:bg-[var(--color-app-accent)] selection:text-white">
@@ -78,11 +95,15 @@ export function Layout(props: { children?: JSX.Element }) {
         
         {/* User / Workspace indicator at bottom */}
         <div class={cn("p-4 border-t border-[var(--color-app-border)] flex items-center gap-3", !isSidebarOpen() && "justify-center px-0")}>
-           <div class="w-8 h-8 rounded-full bg-gradient-to-tr from-[var(--color-app-accent)] to-purple-500 shrink-0" />
+           {workspaceImage() ? (
+             <img src={workspaceImage()} alt="Workspace Logo" class="w-8 h-8 rounded-full object-cover shrink-0" />
+           ) : (
+             <div class="w-8 h-8 rounded-full bg-gradient-to-tr from-[var(--color-app-accent)] to-purple-500 shrink-0" />
+           )}
            {isSidebarOpen() && (
              <div class="flex flex-col overflow-hidden">
-               <span class="text-sm font-medium truncate">Dev Workspace</span>
-               <span class="text-xs text-[var(--color-app-text-secondary)] truncate">Local Environment</span>
+               <span class="text-sm font-medium truncate">{workspaceTitle()}</span>
+               <span class="text-xs text-[var(--color-app-text-secondary)] truncate">{workspaceSubtitle()}</span>
              </div>
            )}
         </div>

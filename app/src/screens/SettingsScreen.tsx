@@ -14,6 +14,78 @@ const categories = [
 export function SettingsScreen() {
   const [activeTab, setActiveTab] = createSignal("general");
   const [retentionDays, setRetentionDays] = createLocalStorage<number>("archcalc_history_retention", 30);
+  const [workspaceTitle, setWorkspaceTitle] = createLocalStorage("archcalc_workspace_title", "Dev Workspace");
+  const [workspaceSubtitle, setWorkspaceSubtitle] = createLocalStorage("archcalc_workspace_subtitle", "Local Environment");
+  const [workspaceImage, setWorkspaceImage] = createLocalStorage("archcalc_workspace_image", "");
+  const [exported, setExported] = createSignal(false);
+
+  const handleExport = () => {
+    try {
+      const data = {
+        archcalc_history: localStorage.getItem("archcalc_history"),
+        archcalc_history_retention: localStorage.getItem("archcalc_history_retention"),
+        archcalc_workspace_title: localStorage.getItem("archcalc_workspace_title"),
+        archcalc_workspace_subtitle: localStorage.getItem("archcalc_workspace_subtitle"),
+        archcalc_workspace_image: localStorage.getItem("archcalc_workspace_image"),
+      };
+      const blob = new Blob([JSON.stringify(data, null, 2)], { type: "application/json" });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `archcalc-export-${new Date().toISOString().split('T')[0]}.json`;
+      a.click();
+      URL.revokeObjectURL(url);
+      setExported(true);
+      setTimeout(() => setExported(false), 2000);
+    } catch (error) {
+      console.error("Failed to export data:", error);
+      alert("Failed to export data.");
+    }
+  };
+
+  const handleImport = (e: Event) => {
+    const file = (e.target as HTMLInputElement).files?.[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = (event) => {
+      try {
+        const data = JSON.parse(event.target?.result as string);
+        if (typeof data !== "object" || !data) throw new Error("Invalid format");
+        
+        Object.keys(data).forEach(key => {
+          if (data[key] !== null && data[key] !== undefined) {
+             localStorage.setItem(key, data[key]);
+          }
+        });
+        window.dispatchEvent(new Event("local-storage"));
+        alert("Data imported successfully!");
+      } catch (error) {
+        console.error("Failed to import data:", error);
+        alert("Failed to import data. Make sure the file is a valid ArchCalc export.");
+      }
+    };
+    reader.readAsText(file);
+    (e.target as HTMLInputElement).value = "";
+  };
+
+  const handleClear = () => {
+    if (confirm("Are you sure you want to clear all data? This cannot be undone.")) {
+      const keys = [
+        "archcalc_history",
+        "archcalc_history_retention",
+        "archcalc_workspace_title",
+        "archcalc_workspace_subtitle",
+        "archcalc_workspace_image"
+      ];
+      keys.forEach(key => {
+        localStorage.removeItem(key);
+      });
+      window.dispatchEvent(new Event("local-storage"));
+      alert("All data has been cleared.");
+      window.location.reload();
+    }
+  };
 
   return (
     <div class="flex h-full max-w-5xl mx-auto w-full">
@@ -52,11 +124,6 @@ export function SettingsScreen() {
               
               <div class="space-y-4">
                 <SettingsRow 
-                  title="Launch on startup" 
-                  description="Start ArchCalc automatically when you log in."
-                  control={<Toggle defaultChecked />}
-                />
-                <SettingsRow 
                   title="Global shortcut" 
                   description="Shortcut to show/hide the main command palette."
                   control={
@@ -82,6 +149,73 @@ export function SettingsScreen() {
                     </select>
                   }
                 />
+              </div>
+
+              <div class="space-y-6 mt-10">
+                <div>
+                  <h3 class="text-lg font-medium">Workspace Profile</h3>
+                  <p class="text-sm text-[var(--color-app-text-secondary)] mt-1">Customize your workspace appearance in the sidebar.</p>
+                </div>
+                <div class="h-px bg-[var(--color-app-border)]"></div>
+                
+                <div class="space-y-4">
+                   <SettingsRow 
+                     title="Workspace Title" 
+                     description="The main name of your workspace."
+                     control={
+                       <input 
+                         type="text"
+                         value={workspaceTitle()}
+                         onInput={(e) => setWorkspaceTitle(e.currentTarget.value)}
+                         class="bg-[var(--color-app-surface-secondary)] border border-[var(--color-app-border)] rounded-lg px-3 py-1.5 text-sm outline-none text-[var(--color-app-text-primary)] w-48"
+                       />
+                     }
+                   />
+                   <SettingsRow 
+                     title="Workspace Subtitle" 
+                     description="A short description or environment name."
+                     control={
+                       <input 
+                         type="text"
+                         value={workspaceSubtitle()}
+                         onInput={(e) => setWorkspaceSubtitle(e.currentTarget.value)}
+                         class="bg-[var(--color-app-surface-secondary)] border border-[var(--color-app-border)] rounded-lg px-3 py-1.5 text-sm outline-none text-[var(--color-app-text-primary)] w-48"
+                       />
+                     }
+                   />
+                   <SettingsRow 
+                     title="Workspace Image" 
+                     description="Upload a local file for the workspace logo."
+                     control={
+                       <div class="flex items-center gap-2">
+                         {workspaceImage() && (
+                           <button 
+                             onClick={() => setWorkspaceImage("")}
+                             class="px-2 py-1.5 text-xs text-[var(--color-app-error)] hover:bg-[var(--color-app-error)]/10 rounded transition-colors"
+                           >
+                             Clear
+                           </button>
+                         )}
+                         <label class="cursor-pointer bg-[var(--color-app-surface-secondary)] hover:bg-[var(--color-app-surface)] border border-[var(--color-app-border)] text-[var(--color-app-text-primary)] rounded-lg px-3 py-1.5 text-sm transition-colors">
+                           Choose File
+                           <input 
+                             type="file"
+                             accept="image/*"
+                             class="hidden"
+                             onChange={(e) => {
+                               const file = e.currentTarget.files?.[0];
+                               if (file) {
+                                 const reader = new FileReader();
+                                 reader.onload = (e) => setWorkspaceImage(e.target?.result as string);
+                                 reader.readAsDataURL(file);
+                               }
+                             }}
+                           />
+                         </label>
+                       </div>
+                     }
+                   />
+                </div>
               </div>
             </div>
           </Show>
@@ -136,17 +270,22 @@ export function SettingsScreen() {
                 <SettingsRow 
                   title="Export Data" 
                   description="Save your history, workspaces, and settings to a JSON file."
-                  control={<button class="px-3 py-1.5 bg-[var(--color-app-surface-secondary)] hover:bg-[var(--color-app-surface)] border border-[var(--color-app-border)] text-[var(--color-app-text-primary)] text-sm font-medium rounded-lg transition-colors">Export...</button>}
+                  control={<button onClick={handleExport} class={cn("px-3 py-1.5 border text-sm font-medium rounded-lg transition-colors", exported() ? "bg-[var(--color-app-success)]/10 border-[var(--color-app-success)]/30 text-[var(--color-app-success)]" : "bg-[var(--color-app-surface-secondary)] hover:bg-[var(--color-app-surface)] border-[var(--color-app-border)] text-[var(--color-app-text-primary)]")}>{exported() ? "Exported!" : "Export..."}</button>}
                 />
                 <SettingsRow 
                   title="Import Data" 
                   description="Restore data from a previously exported JSON file."
-                  control={<button class="px-3 py-1.5 bg-[var(--color-app-surface-secondary)] hover:bg-[var(--color-app-surface)] border border-[var(--color-app-border)] text-[var(--color-app-text-primary)] text-sm font-medium rounded-lg transition-colors">Import...</button>}
+                  control={
+                    <label class="cursor-pointer px-3 py-1.5 bg-[var(--color-app-surface-secondary)] hover:bg-[var(--color-app-surface)] border border-[var(--color-app-border)] text-[var(--color-app-text-primary)] text-sm font-medium rounded-lg transition-colors">
+                      Import...
+                      <input type="file" accept=".json" class="hidden" onChange={handleImport} />
+                    </label>
+                  }
                 />
                 <SettingsRow 
                   title="Clear Data" 
                   description="Permanently delete all local data. This cannot be undone."
-                  control={<button class="px-3 py-1.5 bg-[var(--color-app-error)]/10 text-[var(--color-app-error)] hover:bg-[var(--color-app-error)]/20 border border-[var(--color-app-error)]/20 text-sm font-medium rounded-lg transition-colors">Clear All</button>}
+                  control={<button onClick={handleClear} class="px-3 py-1.5 bg-[var(--color-app-error)]/10 text-[var(--color-app-error)] hover:bg-[var(--color-app-error)]/20 border border-[var(--color-app-error)]/20 text-sm font-medium rounded-lg transition-colors">Clear All</button>}
                 />
               </div>
             </div>
