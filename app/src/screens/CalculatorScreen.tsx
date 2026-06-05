@@ -1,4 +1,5 @@
 import { createSignal, onMount, onCleanup, Show, For, JSX } from "solid-js";
+import { invoke } from "@tauri-apps/api/core";
 import { Transition } from "solid-transition-group";
 import { Delete, Copy, Check, RotateCcw, Plus, Minus, X, Divide, Equal, Percent } from "lucide-solid";
 import { cn } from "../utils/cn";
@@ -46,19 +47,22 @@ const buttons: CalcButton[][] = [
   ],
 ];
 
-function evaluate(expression: string): string {
+async function evaluate(expression: string): Promise<string> {
   try {
     // Sanitize: only allow numbers, operators, dots, parens, spaces
     const sanitized = expression.replace(/[^0-9+\-*/.() %]/g, "");
     if (!sanitized.trim()) return "";
     // Replace % with /100
     const withPercent = sanitized.replace(/(\d+(?:\.\d+)?)%/g, "($1/100)");
-    // eslint-disable-next-line no-eval
-    const result = Function(`"use strict"; return (${withPercent})`)();
-    if (typeof result !== "number" || !isFinite(result)) return "Error";
-    // Format nicely
-    const formatted = parseFloat(result.toPrecision(12));
-    return formatted.toLocaleString("en-US", { maximumFractionDigits: 10 });
+    
+    // Call Rust backend for calculation
+    const result = await invoke<string>("evaluate", { expression: withPercent });
+    
+    const num = parseFloat(result);
+    if (!isNaN(num) && isFinite(num)) {
+      return num.toLocaleString("en-US", { maximumFractionDigits: 10 });
+    }
+    return result;
   } catch {
     return "Error";
   }
@@ -108,12 +112,13 @@ export function CalculatorScreen() {
     if (value === "=") {
       const exp = expression();
       if (!exp) return;
-      const result = evaluate(exp);
-      setPreviousExpression(exp);
-      setPreviousResult(result);
-      setDisplay(result);
-      setExpression(result === "Error" ? "" : result.replace(/,/g, ""));
-      setJustEvaluated(true);
+      evaluate(exp).then(result => {
+        setPreviousExpression(exp);
+        setPreviousResult(result);
+        setDisplay(result);
+        setExpression(result === "Error" ? "" : result.replace(/,/g, ""));
+        setJustEvaluated(true);
+      });
       return;
     }
 

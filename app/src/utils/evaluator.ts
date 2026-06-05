@@ -1,7 +1,7 @@
 import { v4 as uuidv4, v5 as uuidv5 } from 'uuid';
 import { sha1, sha256, sha512 } from 'js-sha256';
 import { Base64 } from 'js-base64';
-// Use a local md5 implementation or just add it if necessary. We'll use sha for now.
+import { invoke } from '@tauri-apps/api/core';
 
 export interface EvalResult {
   value: string;
@@ -10,7 +10,7 @@ export interface EvalResult {
 }
 
 export const evaluator = {
-  process(query: string): EvalResult | null {
+  async process(query: string): Promise<EvalResult | null> {
     if (!query || !query.trim()) return null;
     
     const lower = query.toLowerCase().trim();
@@ -78,15 +78,16 @@ export const evaluator = {
 
     // 7. Math Parsing
     try {
-      return { value: this.math(query), type: "calc" };
+      const result = await this.math(query);
+      return { value: result, type: "calc" };
     } catch (e) {
       // Not a valid math expression, return null to show no result
       return null;
     }
   },
 
-  math(expression: string, context: Record<string, number> = {}): string {
-    // Basic safe evaluator. Replace variables from context.
+  async math(expression: string, context: Record<string, number> = {}): Promise<string> {
+    // Replace variables from context.
     let sanitized = expression;
     
     // Replace variables
@@ -101,13 +102,9 @@ export const evaluator = {
     
     const withPercent = sanitized.replace(/(\d+(?:\.\d+)?)%/g, "($1/100)");
     
-    // eslint-disable-next-line no-eval
-    const result = Function(`"use strict"; return (${withPercent})`)();
-    
-    if (typeof result !== "number" || !isFinite(result)) throw new Error("Invalid math");
-    
-    const formatted = parseFloat(result.toPrecision(12));
-    return formatted.toString();
+    // Call the Rust backend instead of eval
+    const result = await invoke<string>("evaluate", { expression: withPercent });
+    return result;
   },
 
   convert(value: number, from: string, to: string): string | null {

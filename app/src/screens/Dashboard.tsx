@@ -41,7 +41,12 @@ export function Dashboard() {
   });
 
   createEffect(() => {
-    setEvalResult(evaluator.process(query()));
+    const q = query();
+    let isCancelled = false;
+    evaluator.process(q).then((res) => {
+      if (!isCancelled) setEvalResult(res);
+    });
+    onCleanup(() => { isCancelled = true; });
   });
 
   const handleCopy = () => {
