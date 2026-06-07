@@ -1,13 +1,13 @@
-import { Router, Route } from "@solidjs/router";
+import { Route, Router } from "@solidjs/router";
 import { Layout } from "./components/Layout";
-import { Dashboard } from "./screens/Dashboard";
 import { CalculatorScreen } from "./screens/CalculatorScreen";
-import { HistoryScreen } from "./screens/HistoryScreen";
-import { WorkspacesScreen } from "./screens/WorkspacesScreen";
 import { ConverterScreen } from "./screens/ConverterScreen";
+import { Dashboard } from "./screens/Dashboard";
 import { DevToolsScreen } from "./screens/DevToolsScreen";
-import { SystemDashboard } from "./screens/SystemDashboard";
+import { HistoryScreen } from "./screens/HistoryScreen";
 import { SettingsScreen } from "./screens/SettingsScreen";
+import { SystemDashboard } from "./screens/SystemDashboard";
+import { WorkspacesScreen } from "./screens/WorkspacesScreen";
 
 function App() {
   return (

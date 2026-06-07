@@ -1,0 +1,25 @@
+{
+  "packages": {
+    ".": {
+      "release-type": "node",
+      "package-name": "archcalc",
+      "extra-files": [
+        {
+          "type": "json",
+          "path": "app/package.json",
+          "jsonpath": "$.version"
+        },
+        {
+          "type": "json",
+          "path": "web/package.json",
+          "jsonpath": "$.version"
+        },
+        {
+          "type": "toml",
+          "path": "app/src-tauri/Cargo.toml",
+          "jsonpath": "$.package.version"
+        }
+      ]
+    }
+  }
+}

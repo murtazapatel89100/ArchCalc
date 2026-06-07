@@ -1,16 +1,16 @@
-import { createSignal, JSX, onMount, onCleanup } from "solid-js";
 import { A, useLocation, useNavigate } from "@solidjs/router";
-import { 
-  Calculator, 
+import {
+  Activity,
+  ArrowRightLeft,
+  Briefcase,
+  Calculator,
   Hash,
-  History, 
-  Briefcase, 
-  ArrowRightLeft, 
-  Wrench, 
-  Activity, 
-  Settings,
+  History,
   Menu,
+  Settings,
+  Wrench,
 } from "lucide-solid";
+import { createSignal, type JSX, onCleanup, onMount } from "solid-js";
 import { cn } from "../utils/cn";
 import { createLocalStorage } from "../utils/createLocalStorage";
 
@@ -29,8 +29,14 @@ export function Layout(props: { children?: JSX.Element }) {
   const [isSidebarOpen, setIsSidebarOpen] = createSignal(true);
   const location = useLocation();
   const navigate = useNavigate();
-  const [workspaceTitle] = createLocalStorage("archcalc_workspace_title", "Dev Workspace");
-  const [workspaceSubtitle] = createLocalStorage("archcalc_workspace_subtitle", "Local Environment");
+  const [workspaceTitle] = createLocalStorage(
+    "archcalc_workspace_title",
+    "Dev Workspace",
+  );
+  const [workspaceSubtitle] = createLocalStorage(
+    "archcalc_workspace_subtitle",
+    "Local Environment",
+  );
   const [workspaceImage] = createLocalStorage("archcalc_workspace_image", "");
 
   onMount(() => {
@@ -48,18 +54,25 @@ export function Layout(props: { children?: JSX.Element }) {
   return (
     <div class="flex h-screen w-full bg-[var(--color-app-bg)] text-[var(--color-app-text-primary)] overflow-hidden font-sans selection:bg-[var(--color-app-accent)] selection:text-white">
       {/* Sidebar */}
-      <aside 
+      <aside
         class={cn(
           "flex flex-col border-r border-[var(--color-app-border)] bg-[var(--color-app-surface)] transition-all duration-300 ease-in-out z-20",
-          isSidebarOpen() ? "w-64" : "w-16"
+          isSidebarOpen() ? "w-64" : "w-16",
         )}
       >
         <div class="flex h-14 items-center justify-between px-4 border-b border-[var(--color-app-border)]">
-          <div class={cn("flex items-center gap-2 font-semibold text-lg overflow-hidden whitespace-nowrap", !isSidebarOpen() && "opacity-0 w-0")}>
-            <div class="w-6 h-6 rounded bg-[var(--color-app-accent)] flex items-center justify-center text-xs text-white">Λ</div>
+          <div
+            class={cn(
+              "flex items-center gap-2 font-semibold text-lg overflow-hidden whitespace-nowrap",
+              !isSidebarOpen() && "opacity-0 w-0",
+            )}
+          >
+            <div class="w-6 h-6 rounded bg-[var(--color-app-accent)] flex items-center justify-center text-xs text-white">
+              Λ
+            </div>
             ArchCalc
           </div>
-          <button 
+          <button
             onClick={() => setIsSidebarOpen(!isSidebarOpen())}
             class="p-1 rounded hover:bg-[var(--color-app-surface-secondary)] text-[var(--color-app-text-secondary)] transition-colors"
           >
@@ -75,37 +88,61 @@ export function Layout(props: { children?: JSX.Element }) {
                 href={item.path}
                 class={cn(
                   "flex items-center gap-3 px-3 py-2 rounded-lg transition-all duration-200 group relative",
-                  isActive() 
-                    ? "bg-[var(--color-app-surface-secondary)] text-[var(--color-app-text-primary)]" 
-                    : "text-[var(--color-app-text-secondary)] hover:bg-[var(--color-app-surface-secondary)]/50 hover:text-[var(--color-app-text-primary)]"
+                  isActive()
+                    ? "bg-[var(--color-app-surface-secondary)] text-[var(--color-app-text-primary)]"
+                    : "text-[var(--color-app-text-secondary)] hover:bg-[var(--color-app-surface-secondary)]/50 hover:text-[var(--color-app-text-primary)]",
                 )}
                 title={!isSidebarOpen() ? item.label : undefined}
               >
                 {isActive() && (
                   <div class="absolute left-0 w-1 h-4 bg-[var(--color-app-accent)] rounded-r-full" />
                 )}
-                <item.icon size={18} class={cn("shrink-0", isActive() && "text-[var(--color-app-accent)]")} />
-                <span class={cn("whitespace-nowrap transition-opacity", !isSidebarOpen() && "opacity-0 hidden")}>
+                <item.icon
+                  size={18}
+                  class={cn(
+                    "shrink-0",
+                    isActive() && "text-[var(--color-app-accent)]",
+                  )}
+                />
+                <span
+                  class={cn(
+                    "whitespace-nowrap transition-opacity",
+                    !isSidebarOpen() && "opacity-0 hidden",
+                  )}
+                >
                   {item.label}
                 </span>
               </A>
-            )
+            );
           })}
         </nav>
-        
+
         {/* User / Workspace indicator at bottom */}
-        <div class={cn("p-4 border-t border-[var(--color-app-border)] flex items-center gap-3", !isSidebarOpen() && "justify-center px-0")}>
-           {workspaceImage() ? (
-             <img src={workspaceImage()} alt="Workspace Logo" class="w-8 h-8 rounded-full object-cover shrink-0" />
-           ) : (
-             <div class="w-8 h-8 rounded-full bg-gradient-to-tr from-[var(--color-app-accent)] to-purple-500 shrink-0" />
-           )}
-           {isSidebarOpen() && (
-             <div class="flex flex-col overflow-hidden">
-               <span class="text-sm font-medium truncate">{workspaceTitle()}</span>
-               <span class="text-xs text-[var(--color-app-text-secondary)] truncate">{workspaceSubtitle()}</span>
-             </div>
-           )}
+        <div
+          class={cn(
+            "p-4 border-t border-[var(--color-app-border)] flex items-center gap-3",
+            !isSidebarOpen() && "justify-center px-0",
+          )}
+        >
+          {workspaceImage() ? (
+            <img
+              src={workspaceImage()}
+              alt="Workspace Logo"
+              class="w-8 h-8 rounded-full object-cover shrink-0"
+            />
+          ) : (
+            <div class="w-8 h-8 rounded-full bg-gradient-to-tr from-[var(--color-app-accent)] to-purple-500 shrink-0" />
+          )}
+          {isSidebarOpen() && (
+            <div class="flex flex-col overflow-hidden">
+              <span class="text-sm font-medium truncate">
+                {workspaceTitle()}
+              </span>
+              <span class="text-xs text-[var(--color-app-text-secondary)] truncate">
+                {workspaceSubtitle()}
+              </span>
+            </div>
+          )}
         </div>
       </aside>
 

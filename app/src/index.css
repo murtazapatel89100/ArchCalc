@@ -16,28 +16,28 @@
 }
 
 @layer base {
-  :root {
-    color-scheme: dark;
-  }
-  body {
-    background-color: var(--color-app-bg);
-    color: var(--color-app-text-primary);
-    font-family: var(--font-sans);
-  }
+	:root {
+		color-scheme: dark;
+	}
+	body {
+		background-color: var(--color-app-bg);
+		color: var(--color-app-text-primary);
+		font-family: var(--font-sans);
+	}
 }
 
 /* Custom scrollbar for Webkit to match Raycast/Linear vibe */
 ::-webkit-scrollbar {
-  width: 8px;
-  height: 8px;
+	width: 8px;
+	height: 8px;
 }
 ::-webkit-scrollbar-track {
-  background: transparent;
+	background: transparent;
 }
 ::-webkit-scrollbar-thumb {
-  background: var(--color-app-border);
-  border-radius: 4px;
+	background: var(--color-app-border);
+	border-radius: 4px;
 }
 ::-webkit-scrollbar-thumb:hover {
-  background: var(--color-app-text-secondary);
+	background: var(--color-app-text-secondary);
 }

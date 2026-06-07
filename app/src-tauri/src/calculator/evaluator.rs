@@ -1,7 +1,6 @@
 use crate::calculator::ast::Expr;
 use crate::errors::CalculatorError;
 
-
 pub fn evaluate_expr(expr: &Expr) -> Result<f64, CalculatorError> {
     match expr {
         Expr::Number(n) => Ok(*n),

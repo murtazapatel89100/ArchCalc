@@ -1,7 +1,7 @@
 use crate::errors::CalculatorError;
 use crate::models::history::HistoryItem;
 use std::fs;
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 use tauri::{AppHandle, Manager};
 
 fn get_history_file_path(app: &AppHandle) -> Result<PathBuf, CalculatorError> {
@@ -12,7 +12,7 @@ fn get_history_file_path(app: &AppHandle) -> Result<PathBuf, CalculatorError> {
     Ok(path)
 }
 
-fn ensure_directory_exists(path: &PathBuf) -> Result<(), CalculatorError> {
+fn ensure_directory_exists(path: &Path) -> Result<(), CalculatorError> {
     if let Some(parent) = path.parent() {
         if !parent.exists() {
             fs::create_dir_all(parent)?;
@@ -36,10 +36,9 @@ pub fn save_history(app: &AppHandle, history: &Vec<HistoryItem>) -> Result<(), C
     let file_path = get_history_file_path(app)?;
     ensure_directory_exists(&file_path)?;
 
-    let data = serde_json::to_string_pretty(history).map_err(|e| {
-        CalculatorError::IoError(format!("Failed to serialize history: {}", e))
-    })?;
-    
+    let data = serde_json::to_string_pretty(history)
+        .map_err(|e| CalculatorError::IoError(format!("Failed to serialize history: {}", e)))?;
+
     fs::write(file_path, data)?;
     Ok(())
 }
@@ -47,11 +46,11 @@ pub fn save_history(app: &AppHandle, history: &Vec<HistoryItem>) -> Result<(), C
 pub fn add_history_item(app: &AppHandle, item: HistoryItem) -> Result<(), CalculatorError> {
     let mut history = load_history(app)?;
     history.push(item);
-    
+
     // Optional: Keep only the last 100 items to avoid infinite growth
     if history.len() > 100 {
         history.remove(0);
     }
-    
+
     save_history(app, &history)
 }

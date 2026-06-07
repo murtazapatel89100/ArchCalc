@@ -53,7 +53,7 @@ pub fn tokenize(input: &str) -> Result<Vec<Token>, CalculatorError> {
             '0'..='9' | '.' => {
                 let mut num_str = String::new();
                 while let Some(&ch) = chars.peek() {
-                    if ch.is_digit(10) || ch == '.' {
+                    if ch.is_ascii_digit() || ch == '.' {
                         num_str.push(ch);
                         chars.next();
                     } else {

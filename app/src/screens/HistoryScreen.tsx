@@ -1,15 +1,18 @@
-import { createSignal, createMemo, For, Show } from "solid-js";
-import { Search, Clock, ArrowRight, Trash2 } from "lucide-solid";
+import { ArrowRight, Clock, Search, Trash2 } from "lucide-solid";
+import { createMemo, createSignal, For, Show } from "solid-js";
 import { createLocalStorage } from "../utils/createLocalStorage";
-import { HistoryItem } from "./Dashboard";
+import type { HistoryItem } from "./Dashboard";
 
 export function HistoryScreen() {
-  const [history, setHistory] = createLocalStorage<HistoryItem[]>("archcalc_history", []);
+  const [history, setHistory] = createLocalStorage<HistoryItem[]>(
+    "archcalc_history",
+    [],
+  );
   const [search, setSearch] = createSignal("");
 
   const clearHistory = () => {
     if (confirm("Are you sure you want to clear your entire history?")) {
-      // @ts-ignore
+      // @ts-expect-error
       setHistory([]);
     }
   };
@@ -17,10 +20,11 @@ export function HistoryScreen() {
   const filteredHistory = createMemo(() => {
     if (!search()) return history();
     const lower = search().toLowerCase();
-    return history().filter(h => 
-      h.expression.toLowerCase().includes(lower) || 
-      h.result.toLowerCase().includes(lower) ||
-      h.tags.some(t => t.toLowerCase().includes(lower))
+    return history().filter(
+      (h) =>
+        h.expression.toLowerCase().includes(lower) ||
+        h.result.toLowerCase().includes(lower) ||
+        h.tags.some((t) => t.toLowerCase().includes(lower)),
     );
   });
 
@@ -29,9 +33,11 @@ export function HistoryScreen() {
       <div class="flex items-center justify-between">
         <div>
           <h1 class="text-2xl font-semibold tracking-tight">History</h1>
-          <p class="text-[var(--color-app-text-secondary)] text-sm mt-1">Your recent calculations and conversions.</p>
+          <p class="text-[var(--color-app-text-secondary)] text-sm mt-1">
+            Your recent calculations and conversions.
+          </p>
         </div>
-        <button 
+        <button
           onClick={clearHistory}
           disabled={history().length === 0}
           class="flex items-center gap-2 px-3 py-1.5 text-sm font-medium text-[var(--color-app-error)] bg-[var(--color-app-error)]/10 hover:bg-[var(--color-app-error)]/20 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
@@ -55,8 +61,8 @@ export function HistoryScreen() {
       </div>
 
       <div class="space-y-4">
-        <Show 
-          when={filteredHistory().length > 0} 
+        <Show
+          when={filteredHistory().length > 0}
           fallback={
             <div class="flex flex-col items-center justify-center py-20 text-[var(--color-app-text-secondary)]">
               <Clock size={48} class="mb-4 opacity-20" />
@@ -69,15 +75,26 @@ export function HistoryScreen() {
               <div class="bg-[var(--color-app-surface)] border border-[var(--color-app-border)] rounded-xl p-4 flex flex-col gap-3 hover:border-[var(--color-app-accent)]/30 transition-colors group">
                 <div class="flex items-center justify-between">
                   <div class="flex items-center gap-2">
-                    <span class="text-xs font-medium px-2 py-0.5 rounded bg-[var(--color-app-surface-secondary)] text-[var(--color-app-text-secondary)] uppercase tracking-wider">{item.tags[0] || 'Unknown'}</span>
+                    <span class="text-xs font-medium px-2 py-0.5 rounded bg-[var(--color-app-surface-secondary)] text-[var(--color-app-text-secondary)] uppercase tracking-wider">
+                      {item.tags[0] || "Unknown"}
+                    </span>
                   </div>
-                  <span class="text-xs text-[var(--color-app-text-secondary)] font-medium flex items-center gap-1"><Clock size={12}/> {item.time}</span>
+                  <span class="text-xs text-[var(--color-app-text-secondary)] font-medium flex items-center gap-1">
+                    <Clock size={12} /> {item.time}
+                  </span>
                 </div>
-                
+
                 <div class="flex flex-col md:flex-row md:items-center gap-2 md:gap-4 font-mono">
-                  <span class="text-[var(--color-app-text-primary)] font-medium truncate">{item.expression}</span>
-                  <ArrowRight size={14} class="text-[var(--color-app-text-secondary)] hidden md:block" />
-                  <span class="text-[var(--color-app-success)] font-semibold truncate break-all whitespace-normal md:whitespace-nowrap">{item.result}</span>
+                  <span class="text-[var(--color-app-text-primary)] font-medium truncate">
+                    {item.expression}
+                  </span>
+                  <ArrowRight
+                    size={14}
+                    class="text-[var(--color-app-text-secondary)] hidden md:block"
+                  />
+                  <span class="text-[var(--color-app-success)] font-semibold truncate break-all whitespace-normal md:whitespace-nowrap">
+                    {item.result}
+                  </span>
                 </div>
               </div>
             )}

@@ -1,7 +1,7 @@
 use serde::Serialize;
-use sysinfo::{System, Networks};
-use tauri::State;
 use std::sync::Mutex;
+use sysinfo::{Networks, System};
+use tauri::State;
 
 pub struct SystemState {
     pub sys: Mutex<System>,

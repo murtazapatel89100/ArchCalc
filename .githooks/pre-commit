@@ -1,0 +1,29 @@
+#!/usr/bin/env bash
+# Pre-commit hook for ArchCalc
+set -e
+
+echo "Running pre-commit checks..."
+
+# Check web directory with Biome
+echo "1/3 Checking React files in web/..."
+cd web
+# using dlx to ensure biome is available and runs against staged files
+pnpm dlx @biomejs/biome check --staged
+cd ..
+
+# Check app directory with Biome
+echo "2/3 Checking React/Solid files in app/..."
+cd app
+pnpm dlx @biomejs/biome check --staged
+cd ..
+
+# Check Rust codebase
+echo "3/3 Checking Rust code in app/src-tauri..."
+cd app/src-tauri
+# Format check
+cargo fmt -- --check
+# Clippy check (deny warnings)
+cargo clippy --workspace --all-targets --all-features -- -D warnings
+cd ../..
+
+echo "All checks passed! 🎉"

@@ -1,7 +1,25 @@
-import { createSignal, onMount, onCleanup, Show, For, JSX } from "solid-js";
 import { invoke } from "@tauri-apps/api/core";
+import {
+  Check,
+  Copy,
+  Delete,
+  Divide,
+  Equal,
+  Minus,
+  Percent,
+  Plus,
+  RotateCcw,
+  X,
+} from "lucide-solid";
+import {
+  createSignal,
+  For,
+  type JSX,
+  onCleanup,
+  onMount,
+  Show,
+} from "solid-js";
 import { Transition } from "solid-transition-group";
-import { Delete, Copy, Check, RotateCcw, Plus, Minus, X, Divide, Equal, Percent } from "lucide-solid";
 import { cn } from "../utils/cn";
 
 type ButtonVariant = "number" | "operator" | "action" | "equals" | "clear";
@@ -16,7 +34,12 @@ interface CalcButton {
 
 const buttons: CalcButton[][] = [
   [
-    { label: "AC", value: "AC", variant: "clear", icon: <RotateCcw size={16} /> },
+    {
+      label: "AC",
+      value: "AC",
+      variant: "clear",
+      icon: <RotateCcw size={16} />,
+    },
     { label: "⌫", value: "DEL", variant: "action", icon: <Delete size={18} /> },
     { label: "%", value: "%", variant: "action", icon: <Percent size={16} /> },
     { label: "÷", value: "/", variant: "operator", icon: <Divide size={18} /> },
@@ -54,12 +77,14 @@ async function evaluate(expression: string): Promise<string> {
     if (!sanitized.trim()) return "";
     // Replace % with /100
     const withPercent = sanitized.replace(/(\d+(?:\.\d+)?)%/g, "($1/100)");
-    
+
     // Call Rust backend for calculation
-    const result = await invoke<string>("evaluate", { expression: withPercent });
-    
+    const result = await invoke<string>("evaluate", {
+      expression: withPercent,
+    });
+
     const num = parseFloat(result);
-    if (!isNaN(num) && isFinite(num)) {
+    if (!Number.isNaN(num) && Number.isFinite(num)) {
       return num.toLocaleString("en-US", { maximumFractionDigits: 10 });
     }
     return result;
@@ -100,11 +125,11 @@ export function CalculatorScreen() {
     if (value === "NEGATE") {
       setDisplay((prev) => {
         if (prev === "0" || prev === "Error") return prev;
-        return prev.startsWith("-") ? prev.slice(1) : "-" + prev;
+        return prev.startsWith("-") ? prev.slice(1) : `-${prev}`;
       });
       setExpression((prev) => {
         if (!prev || prev === "0") return prev;
-        return prev.startsWith("-") ? prev.slice(1) : "-" + prev;
+        return prev.startsWith("-") ? prev.slice(1) : `-${prev}`;
       });
       return;
     }
@@ -112,12 +137,47 @@ export function CalculatorScreen() {
     if (value === "=") {
       const exp = expression();
       if (!exp) return;
-      evaluate(exp).then(result => {
+      evaluate(exp).then((result) => {
         setPreviousExpression(exp);
         setPreviousResult(result);
         setDisplay(result);
         setExpression(result === "Error" ? "" : result.replace(/,/g, ""));
         setJustEvaluated(true);
+
+        if (result !== "Error") {
+          const storedStr = localStorage.getItem("archcalc_history") || "[]";
+          let h = [];
+          try {
+            h = JSON.parse(storedStr);
+          } catch (e) {}
+          const now = new Date();
+          const newItem = {
+            id: crypto.randomUUID(),
+            title: "Calculation",
+            expression: exp,
+            result: result,
+            tags: ["Calculation"],
+            time: now.toLocaleTimeString([], {
+              hour: "2-digit",
+              minute: "2-digit",
+            }),
+            timestamp: now.getTime(),
+          };
+
+          let newHistory = [newItem, ...h];
+          const retentionDaysStr =
+            localStorage.getItem("archcalc_history_retention") || "30";
+          const retention = Number(retentionDaysStr);
+          if (retention > 0) {
+            const cutoff = now.getTime() - retention * 24 * 60 * 60 * 1000;
+            newHistory = newHistory.filter(
+              (item: any) => item.timestamp > cutoff,
+            );
+          }
+
+          localStorage.setItem("archcalc_history", JSON.stringify(newHistory));
+          window.dispatchEvent(new Event("local-storage"));
+        }
       });
       return;
     }
@@ -143,7 +203,11 @@ export function CalculatorScreen() {
     if (isOperator && !expression() && value !== "-") return;
 
     // Prevent double operator
-    if (isOperator && expression() && ["+", "-", "*", "/"].includes(expression().slice(-1))) {
+    if (
+      isOperator &&
+      expression() &&
+      ["+", "-", "*", "/"].includes(expression().slice(-1))
+    ) {
       setExpression((prev) => prev.slice(0, -1) + value);
       setDisplay(value);
       return;
@@ -156,7 +220,9 @@ export function CalculatorScreen() {
       if (lastPart.includes(".")) return;
     }
 
-    setExpression((prev) => (prev === "0" && value !== "." && !isOperator ? value : prev + value));
+    setExpression((prev) =>
+      prev === "0" && value !== "." && !isOperator ? value : prev + value,
+    );
 
     if (isOperator) {
       setDisplay(value);
@@ -192,7 +258,7 @@ export function CalculatorScreen() {
       } else if (key === "/") {
         e.preventDefault();
         handleInput("/");
-      } else if (key === "%" ) {
+      } else if (key === "%") {
         e.preventDefault();
         handleInput("%");
       } else if (key === "Enter" || key === "=") {
@@ -218,47 +284,49 @@ export function CalculatorScreen() {
     setTimeout(() => setCopied(false), 2000);
   };
 
-  const formattedExpression = () => expression()
-    .replace(/\*/g, " × ")
-    .replace(/\//g, " ÷ ")
-    .replace(/\+/g, " + ")
-    .replace(/-/g, " − ")
-    .replace(/%/g, "%");
+  const formattedExpression = () =>
+    expression()
+      .replace(/\*/g, " × ")
+      .replace(/\//g, " ÷ ")
+      .replace(/\+/g, " + ")
+      .replace(/-/g, " − ")
+      .replace(/%/g, "%");
 
   const getButtonStyles = (variant: ButtonVariant, value: string) => {
     const isActive = activeKey() === value;
-    const base = "relative flex items-center justify-center rounded-2xl font-medium transition-all duration-150 select-none cursor-pointer active:scale-95 ";
+    const base =
+      "relative flex items-center justify-center rounded-2xl font-medium transition-all duration-150 select-none cursor-pointer active:scale-95 ";
 
     switch (variant) {
       case "number":
         return cn(
           base,
           "bg-[var(--color-app-surface-secondary)] text-[var(--color-app-text-primary)] text-xl hover:bg-[var(--color-app-border)] border border-[var(--color-app-border)]/50",
-          isActive && "bg-[var(--color-app-border)] scale-95"
+          isActive && "bg-[var(--color-app-border)] scale-95",
         );
       case "operator":
         return cn(
           base,
           "bg-[var(--color-app-accent)]/15 text-[var(--color-app-accent)] text-xl hover:bg-[var(--color-app-accent)]/25 border border-[var(--color-app-accent)]/20",
-          isActive && "bg-[var(--color-app-accent)]/30 scale-95"
+          isActive && "bg-[var(--color-app-accent)]/30 scale-95",
         );
       case "action":
         return cn(
           base,
           "bg-[var(--color-app-surface)] text-[var(--color-app-text-secondary)] text-lg hover:bg-[var(--color-app-surface-secondary)] border border-[var(--color-app-border)]/50 hover:text-[var(--color-app-text-primary)]",
-          isActive && "bg-[var(--color-app-surface-secondary)] scale-95"
+          isActive && "bg-[var(--color-app-surface-secondary)] scale-95",
         );
       case "equals":
         return cn(
           base,
           "bg-gradient-to-br from-[var(--color-app-accent)] to-blue-600 text-white text-xl hover:from-[var(--color-app-accent)]/90 hover:to-blue-700 shadow-lg shadow-[var(--color-app-accent)]/25 border border-[var(--color-app-accent)]/50",
-          isActive && "shadow-[var(--color-app-accent)]/40 scale-95"
+          isActive && "shadow-[var(--color-app-accent)]/40 scale-95",
         );
       case "clear":
         return cn(
           base,
           "bg-[var(--color-app-error)]/10 text-[var(--color-app-error)] text-lg hover:bg-[var(--color-app-error)]/20 border border-[var(--color-app-error)]/20",
-          isActive && "bg-[var(--color-app-error)]/25 scale-95"
+          isActive && "bg-[var(--color-app-error)]/25 scale-95",
         );
     }
   };
@@ -271,23 +339,29 @@ export function CalculatorScreen() {
           <div class="w-7 h-7 rounded bg-gradient-to-br from-orange-500 to-amber-600 flex items-center justify-center text-white shadow-lg shadow-orange-500/20">
             <span class="text-sm font-bold">Σ</span>
           </div>
-          <span class="font-semibold text-[var(--color-app-text-primary)]">Calculator</span>
+          <span class="font-semibold text-[var(--color-app-text-primary)]">
+            Calculator
+          </span>
         </div>
         <div class="flex items-center gap-1.5 text-xs text-[var(--color-app-text-secondary)]">
-          <kbd class="px-1.5 py-0.5 rounded bg-[var(--color-app-surface-secondary)] border border-[var(--color-app-border)] font-mono">0–9</kbd>
+          <kbd class="px-1.5 py-0.5 rounded bg-[var(--color-app-surface-secondary)] border border-[var(--color-app-border)] font-mono">
+            0–9
+          </kbd>
           <span>numbers</span>
-          <kbd class="px-1.5 py-0.5 rounded bg-[var(--color-app-surface-secondary)] border border-[var(--color-app-border)] font-mono ml-2">Enter</kbd>
+          <kbd class="px-1.5 py-0.5 rounded bg-[var(--color-app-surface-secondary)] border border-[var(--color-app-border)] font-mono ml-2">
+            Enter
+          </kbd>
           <span>evaluate</span>
-          <kbd class="px-1.5 py-0.5 rounded bg-[var(--color-app-surface-secondary)] border border-[var(--color-app-border)] font-mono ml-2">Esc</kbd>
+          <kbd class="px-1.5 py-0.5 rounded bg-[var(--color-app-surface-secondary)] border border-[var(--color-app-border)] font-mono ml-2">
+            Esc
+          </kbd>
           <span>clear</span>
         </div>
       </header>
 
       {/* Main Content */}
       <div class="flex-1 flex items-center justify-center p-6 overflow-auto">
-        <div
-          class="w-full max-w-sm flex flex-col gap-4 transition-all duration-300"
-        >
+        <div class="w-full max-w-sm flex flex-col gap-4 transition-all duration-300">
           {/* Display */}
           <div class="bg-[var(--color-app-surface)] border border-[var(--color-app-border)] rounded-2xl p-6 shadow-2xl shadow-black/20 relative overflow-hidden">
             {/* Subtle gradient overlay at the top */}
@@ -296,19 +370,29 @@ export function CalculatorScreen() {
             {/* Previous expression */}
             <Transition
               onEnter={(el, done) => {
-                const a = el.animate([{ opacity: 0, transform: 'translateY(-8px)' }, { opacity: 1, transform: 'translateY(0)' }], { duration: 200 });
+                const a = el.animate(
+                  [
+                    { opacity: 0, transform: "translateY(-8px)" },
+                    { opacity: 1, transform: "translateY(0)" },
+                  ],
+                  { duration: 200 },
+                );
                 a.finished.then(done);
               }}
               onExit={(el, done) => {
-                const a = el.animate([{ opacity: 1, transform: 'translateY(0)' }, { opacity: 0, transform: 'translateY(-8px)' }], { duration: 200 });
+                const a = el.animate(
+                  [
+                    { opacity: 1, transform: "translateY(0)" },
+                    { opacity: 0, transform: "translateY(-8px)" },
+                  ],
+                  { duration: 200 },
+                );
                 a.finished.then(done);
               }}
             >
               <Show when={previousExpression()}>
                 <div class="text-sm font-mono text-[var(--color-app-text-secondary)]/60 mb-1 text-right truncate relative z-10">
-                  {previousExpression()
-                    .replace(/\*/g, "×")
-                    .replace(/\//g, "÷")}{" "}
+                  {previousExpression().replace(/\*/g, "×").replace(/\//g, "÷")}{" "}
                   = {previousResult()}
                 </div>
               </Show>
@@ -321,11 +405,19 @@ export function CalculatorScreen() {
 
             {/* Main display */}
             <div class="relative z-10">
-              <div class={cn(
-                "text-right font-semibold tracking-tight mt-2 transition-all duration-200 truncate",
-                display().length > 12 ? "text-3xl" : display().length > 8 ? "text-4xl" : "text-5xl",
-                display() === "Error" ? "text-[var(--color-app-error)]" : "text-[var(--color-app-text-primary)]"
-              )}>
+              <div
+                class={cn(
+                  "text-right font-semibold tracking-tight mt-2 transition-all duration-200 truncate",
+                  display().length > 12
+                    ? "text-3xl"
+                    : display().length > 8
+                      ? "text-4xl"
+                      : "text-5xl",
+                  display() === "Error"
+                    ? "text-[var(--color-app-error)]"
+                    : "text-[var(--color-app-text-primary)]",
+                )}
+              >
                 {display()}
               </div>
             </div>
@@ -336,16 +428,17 @@ export function CalculatorScreen() {
                 onClick={handleCopy}
                 class="flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-medium text-[var(--color-app-text-secondary)] hover:text-[var(--color-app-text-primary)] hover:bg-[var(--color-app-surface-secondary)] transition-all border border-transparent hover:border-[var(--color-app-border)]"
               >
-                <Show when={copied()} fallback={
-                  <>
-                    <Copy size={12} />
-                    <span>Copy</span>
-                  </>
-                }>
-                  <>
-                    <Check size={12} class="text-[var(--color-app-success)]" />
-                    <span class="text-[var(--color-app-success)]">Copied</span>
-                  </>
+                <Show
+                  when={copied()}
+                  fallback={
+                    <>
+                      <Copy size={12} />
+                      <span>Copy</span>
+                    </>
+                  }
+                >
+                  <Check size={12} class="text-[var(--color-app-success)]" />
+                  <span class="text-[var(--color-app-success)]">Copied</span>
                 </Show>
               </button>
             </div>
@@ -360,7 +453,7 @@ export function CalculatorScreen() {
                   class={cn(
                     getButtonStyles(btn.variant, btn.value),
                     "h-16",
-                    btn.span ? `col-span-${btn.span}` : ""
+                    btn.span ? `col-span-${btn.span}` : "",
                   )}
                 >
                   {btn.icon || btn.label}

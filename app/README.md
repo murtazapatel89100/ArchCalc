@@ -1,7 +1,22 @@
-# Tauri + Solid + Typescript
+# ArchCalc Desktop App
 
-This template should help get you started developing with Tauri, Solid and Typescript in Vite.
+This directory contains the core desktop application for ArchCalc, built using [Tauri](https://tauri.app/), [SolidJS](https://www.solidjs.com/), and Rust.
 
-## Recommended IDE Setup
+## Architecture
 
-- [VS Code](https://code.visualstudio.com/) + [Tauri](https://marketplace.visualstudio.com/items?itemName=tauri-apps.tauri-vscode) + [rust-analyzer](https://marketplace.visualstudio.com/items?itemName=rust-lang.rust-analyzer)
+Please read [ARCHITECTURE.md](ARCHITECTURE.md) for an in-depth explanation of the Rust backend structure, IPC bridge, and SolidJS frontend.
+
+## Development Setup
+
+### Prerequisites
+Ensure you have the Rust toolchain, Node.js, and pnpm installed.
+
+### Commands
+
+- **Start Dev Server**: `pnpm tauri dev`
+- **Build App**: `pnpm tauri build`
+- **Format UI**: `pnpm dlx @biomejs/biome check --write ./`
+- **Lint Rust**: `cargo clippy --workspace --all-targets --all-features`
+
+## Contributing
+See the root [CONTRIBUTING.md](../CONTRIBUTING.md) for overall guidelines.

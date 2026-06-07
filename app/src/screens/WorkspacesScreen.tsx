@@ -1,5 +1,5 @@
-import { FileText, Plus, Save, Play, Trash, X } from "lucide-solid";
-import { For, createSignal, createEffect, Show } from "solid-js";
+import { FileText, Plus, Trash, X } from "lucide-solid";
+import { createEffect, createSignal, For, Show } from "solid-js";
 import { cn } from "../utils/cn";
 import { createLocalStorage } from "../utils/createLocalStorage";
 import { evaluator } from "../utils/evaluator";
@@ -18,13 +18,21 @@ interface LiveResult {
 }
 
 export function WorkspacesScreen() {
-  const [workspaces, setWorkspaces] = createLocalStorage<Workspace[]>("archcalc_workspaces", [
-    { id: "1", name: "Personal Budget", content: "salary = 50000\nrent = 12000\nfood = 5000\n// Calculate remaining\nremaining = salary - rent - food" }
-  ]);
+  const [workspaces, setWorkspaces] = createLocalStorage<Workspace[]>(
+    "archcalc_workspaces",
+    [
+      {
+        id: "1",
+        name: "Personal Budget",
+        content:
+          "salary = 50000\nrent = 12000\nfood = 5000\n// Calculate remaining\nremaining = salary - rent - food",
+      },
+    ],
+  );
   const [activeId, setActiveId] = createSignal<string>("1");
   const [results, setResults] = createSignal<LiveResult[]>([]);
 
-  const activeWorkspace = () => workspaces().find(w => w.id === activeId());
+  const activeWorkspace = () => workspaces().find((w) => w.id === activeId());
 
   const [showModal, setShowModal] = createSignal(false);
   const [newWorkspaceName, setNewWorkspaceName] = createSignal("");
@@ -40,14 +48,17 @@ export function WorkspacesScreen() {
     if (e) e.preventDefault();
     if (!newWorkspaceName().trim()) return;
     const newId = crypto.randomUUID();
-    setWorkspaces([...workspaces(), { id: newId, name: newWorkspaceName().trim(), content: "" }]);
+    setWorkspaces([
+      ...workspaces(),
+      { id: newId, name: newWorkspaceName().trim(), content: "" },
+    ]);
     setActiveId(newId);
     setShowModal(false);
   };
 
   const removeWorkspace = (id: string, e: Event) => {
     e.stopPropagation();
-    const filtered = workspaces().filter(w => w.id !== id);
+    const filtered = workspaces().filter((w) => w.id !== id);
     setWorkspaces(filtered);
     if (activeId() === id) {
       setActiveId(filtered.length > 0 ? filtered[0].id : "");
@@ -57,13 +68,17 @@ export function WorkspacesScreen() {
   const updateContent = (content: string) => {
     const w = activeWorkspace();
     if (!w) return;
-    setWorkspaces(workspaces().map(ws => ws.id === w.id ? { ...ws, content } : ws));
+    setWorkspaces(
+      workspaces().map((ws) => (ws.id === w.id ? { ...ws, content } : ws)),
+    );
   };
 
   const updateName = (name: string) => {
     const w = activeWorkspace();
     if (!w) return;
-    setWorkspaces(workspaces().map(ws => ws.id === w.id ? { ...ws, name } : ws));
+    setWorkspaces(
+      workspaces().map((ws) => (ws.id === w.id ? { ...ws, name } : ws)),
+    );
   };
 
   // Evaluate lines whenever content changes
@@ -73,14 +88,14 @@ export function WorkspacesScreen() {
       setResults([]);
       return;
     }
-    
-    const lines = w.content.split('\n');
+
+    const lines = w.content.split("\n");
     const newResults: LiveResult[] = [];
     const context: Record<string, number> = {};
 
     lines.forEach((line, i) => {
       const trimmed = line.trim();
-      if (!trimmed || trimmed.startsWith('//')) return;
+      if (!trimmed || trimmed.startsWith("//")) return;
 
       try {
         let varName: string | undefined;
@@ -96,15 +111,17 @@ export function WorkspacesScreen() {
         const valStr = evaluator.math(exprToEval, context);
         const valNum = parseFloat(valStr);
 
-        if (varName && !isNaN(valNum)) {
+        if (varName && !Number.isNaN(valNum)) {
           context[varName] = valNum;
         }
 
         newResults.push({
           lineIndex: i,
           variable: varName,
-          value: parseFloat(valNum.toPrecision(12)).toLocaleString("en-US", { maximumFractionDigits: 4 }),
-          isError: false
+          value: parseFloat(valNum.toPrecision(12)).toLocaleString("en-US", {
+            maximumFractionDigits: 4,
+          }),
+          isError: false,
         });
       } catch (err) {
         // Skip errors or mark them
@@ -119,8 +136,13 @@ export function WorkspacesScreen() {
       {/* Workspace Sidebar */}
       <div class="w-64 border-r border-[var(--color-app-border)] bg-[var(--color-app-surface)]/50 flex flex-col">
         <div class="p-4 flex items-center justify-between border-b border-[var(--color-app-border)]">
-          <span class="font-semibold text-sm text-[var(--color-app-text-primary)]">Workspaces</span>
-          <button onClick={addWorkspace} class="text-[var(--color-app-text-secondary)] hover:text-[var(--color-app-accent)] transition-colors p-1 hover:bg-[var(--color-app-accent)]/10 rounded">
+          <span class="font-semibold text-sm text-[var(--color-app-text-primary)]">
+            Workspaces
+          </span>
+          <button
+            onClick={addWorkspace}
+            class="text-[var(--color-app-text-secondary)] hover:text-[var(--color-app-accent)] transition-colors p-1 hover:bg-[var(--color-app-accent)]/10 rounded"
+          >
             <Plus size={16} />
           </button>
         </div>
@@ -132,15 +154,22 @@ export function WorkspacesScreen() {
                 class={cn(
                   "w-full flex items-center justify-between px-3 py-2 text-sm rounded-md transition-colors text-left group",
                   ws.id === activeId()
-                    ? "bg-[var(--color-app-accent)]/10 text-[var(--color-app-accent)] font-medium" 
-                    : "text-[var(--color-app-text-secondary)] hover:bg-[var(--color-app-surface-secondary)] hover:text-[var(--color-app-text-primary)]"
+                    ? "bg-[var(--color-app-accent)]/10 text-[var(--color-app-accent)] font-medium"
+                    : "text-[var(--color-app-text-secondary)] hover:bg-[var(--color-app-surface-secondary)] hover:text-[var(--color-app-text-primary)]",
                 )}
               >
                 <div class="flex items-center gap-2 overflow-hidden">
-                  <FileText size={14} class={ws.id === activeId() ? "text-[var(--color-app-accent)]" : "text-[var(--color-app-text-secondary)]"} />
+                  <FileText
+                    size={14}
+                    class={
+                      ws.id === activeId()
+                        ? "text-[var(--color-app-accent)]"
+                        : "text-[var(--color-app-text-secondary)]"
+                    }
+                  />
                   <span class="truncate">{ws.name}</span>
                 </div>
-                <div 
+                <div
                   onClick={(e) => removeWorkspace(ws.id, e)}
                   class="opacity-0 group-hover:opacity-100 p-1 hover:text-[var(--color-app-error)] transition-colors rounded-md"
                 >
@@ -153,17 +182,22 @@ export function WorkspacesScreen() {
       </div>
 
       {/* Editor Area */}
-      <Show when={activeWorkspace()} fallback={
-        <div class="flex-1 flex items-center justify-center text-[var(--color-app-text-secondary)]">
-          No workspace selected
-        </div>
-      }>
+      <Show
+        when={activeWorkspace()}
+        fallback={
+          <div class="flex-1 flex items-center justify-center text-[var(--color-app-text-secondary)]">
+            No workspace selected
+          </div>
+        }
+      >
         <div class="flex-1 flex flex-col min-w-0">
           <div class="h-12 border-b border-[var(--color-app-border)] flex items-center justify-between px-4 bg-[var(--color-app-bg)]">
             <div class="flex items-center gap-2">
-              <span class="font-mono text-sm text-[var(--color-app-text-secondary)]">workspace / </span>
-              <input 
-                type="text" 
+              <span class="font-mono text-sm text-[var(--color-app-text-secondary)]">
+                workspace /{" "}
+              </span>
+              <input
+                type="text"
                 value={activeWorkspace()?.name || ""}
                 onInput={(e) => updateName(e.currentTarget.value)}
                 class="bg-transparent font-medium text-sm text-[var(--color-app-text-primary)] focus:outline-none focus:border-b focus:border-[var(--color-app-accent)]"
@@ -181,7 +215,7 @@ export function WorkspacesScreen() {
             {/* Editor */}
             <div class="flex-1 p-6 relative font-mono text-[14px] leading-relaxed flex">
               <div class="w-12 bg-[var(--color-app-surface-secondary)]/20 border-r border-[var(--color-app-border)] flex flex-col items-center pt-2 text-[var(--color-app-text-secondary)]/50 text-xs font-mono select-none">
-                <For each={activeWorkspace()?.content.split('\n')}>
+                <For each={activeWorkspace()?.content.split("\n")}>
                   {(_, i) => <span>{i() + 1}</span>}
                 </For>
               </div>
@@ -195,13 +229,19 @@ export function WorkspacesScreen() {
 
             {/* Live Results Panel */}
             <div class="w-80 border-l border-[var(--color-app-border)] bg-[var(--color-app-surface)]/30 p-6 overflow-y-auto font-mono text-[14px] leading-relaxed">
-              <div class="text-[var(--color-app-text-secondary)] mb-4 text-xs uppercase tracking-wider font-sans font-semibold">Live Results</div>
+              <div class="text-[var(--color-app-text-secondary)] mb-4 text-xs uppercase tracking-wider font-sans font-semibold">
+                Live Results
+              </div>
               <div class="space-y-6">
                 <For each={results()}>
                   {(res) => (
                     <div class="flex items-center justify-between group border-b border-[var(--color-app-border)]/50 pb-2">
-                      <span class="text-[var(--color-app-text-secondary)]/70">{res.variable || `Line ${res.lineIndex + 1}`}</span>
-                      <span class="text-[var(--color-app-accent)] font-medium text-lg">{res.value}</span>
+                      <span class="text-[var(--color-app-text-secondary)]/70">
+                        {res.variable || `Line ${res.lineIndex + 1}`}
+                      </span>
+                      <span class="text-[var(--color-app-accent)] font-medium text-lg">
+                        {res.value}
+                      </span>
                     </div>
                   )}
                 </For>
@@ -216,8 +256,10 @@ export function WorkspacesScreen() {
         <div class="fixed inset-0 z-50 bg-black/50 backdrop-blur-sm flex items-center justify-center p-4">
           <div class="bg-[var(--color-app-surface)] border border-[var(--color-app-border)] rounded-xl w-full max-w-sm shadow-2xl overflow-hidden animate-in fade-in zoom-in-95 duration-200">
             <div class="flex items-center justify-between p-4 border-b border-[var(--color-app-border)]">
-              <h3 class="font-semibold text-[var(--color-app-text-primary)]">New Workspace</h3>
-              <button 
+              <h3 class="font-semibold text-[var(--color-app-text-primary)]">
+                New Workspace
+              </h3>
+              <button
                 onClick={() => setShowModal(false)}
                 class="text-[var(--color-app-text-secondary)] hover:text-[var(--color-app-text-primary)] transition-colors p-1 rounded-md hover:bg-[var(--color-app-surface-secondary)]"
               >
@@ -226,10 +268,12 @@ export function WorkspacesScreen() {
             </div>
             <form onSubmit={confirmAddWorkspace} class="p-4 space-y-4">
               <div class="space-y-2">
-                <label class="text-sm font-medium text-[var(--color-app-text-secondary)]">Workspace Name</label>
-                <input 
+                <label class="text-sm font-medium text-[var(--color-app-text-secondary)]">
+                  Workspace Name
+                </label>
+                <input
                   ref={nameInputRef}
-                  type="text" 
+                  type="text"
                   value={newWorkspaceName()}
                   onInput={(e) => setNewWorkspaceName(e.currentTarget.value)}
                   placeholder="e.g. Personal Budget"
@@ -237,14 +281,14 @@ export function WorkspacesScreen() {
                 />
               </div>
               <div class="flex items-center justify-end gap-2 pt-2">
-                <button 
+                <button
                   type="button"
                   onClick={() => setShowModal(false)}
                   class="px-4 py-2 rounded-lg text-sm font-medium text-[var(--color-app-text-secondary)] hover:text-[var(--color-app-text-primary)] hover:bg-[var(--color-app-surface-secondary)] transition-colors"
                 >
                   Cancel
                 </button>
-                <button 
+                <button
                   type="submit"
                   disabled={!newWorkspaceName().trim()}
                   class="px-4 py-2 rounded-lg text-sm font-medium bg-[var(--color-app-accent)] text-white hover:bg-[var(--color-app-accent)]/90 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
