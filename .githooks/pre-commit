@@ -8,13 +8,13 @@ echo "Running pre-commit checks..."
 echo "1/3 Checking React files in web/..."
 cd web
 # using dlx to ensure biome is available and runs against staged files
-pnpm dlx @biomejs/biome check --staged
+pnpm dlx @biomejs/biome check --staged --no-errors-on-unmatched
 cd ..
 
 # Check app directory with Biome
 echo "2/3 Checking React/Solid files in app/..."
 cd app
-pnpm dlx @biomejs/biome check --staged
+pnpm dlx @biomejs/biome check --staged --no-errors-on-unmatched
 cd ..
 
 # Check Rust codebase
