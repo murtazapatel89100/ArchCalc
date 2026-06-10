@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.4.2](https://github.com/murtazapatel89100/ArchCalc/compare/archcalc-v0.4.1...archcalc-v0.4.2) (2026-06-10)
+
+
+### Bug Fixes
+
+* **aur:** correctly expand SHA256 variable in PKGBUILD generation ([a399fbb](https://github.com/murtazapatel89100/ArchCalc/commit/a399fbb337486302594eadcf26de69867ccf8ef3))
+
 ## [0.4.1](https://github.com/murtazapatel89100/ArchCalc/compare/archcalc-v0.4.0...archcalc-v0.4.1) (2026-06-10)
 
 
