@@ -1,5 +1,5 @@
 import { FileText, Plus, Trash, X } from "lucide-solid";
-import { createEffect, createSignal, For, Show } from "solid-js";
+import { createEffect, createSignal, For, onCleanup, Show } from "solid-js";
 import { cn } from "../utils/cn";
 import { createLocalStorage } from "../utils/createLocalStorage";
 import { evaluator } from "../utils/evaluator";
@@ -89,6 +89,11 @@ export function WorkspacesScreen() {
       return;
     }
 
+    let isCancelled = false;
+    onCleanup(() => {
+      isCancelled = true;
+    });
+
     const lines = w.content.split("\n");
 
     (async () => {
@@ -96,6 +101,7 @@ export function WorkspacesScreen() {
       const context: Record<string, number> = {};
 
       for (let i = 0; i < lines.length; i++) {
+        if (isCancelled) return;
         const line = lines[i];
         const trimmed = line.trim();
         if (!trimmed || trimmed.startsWith("//")) continue;
@@ -112,6 +118,8 @@ export function WorkspacesScreen() {
           }
 
           const valStr = await evaluator.math(exprToEval, context);
+          if (isCancelled) return;
+
           const valNum = parseFloat(valStr);
 
           if (varName && !Number.isNaN(valNum)) {
@@ -121,17 +129,21 @@ export function WorkspacesScreen() {
           newResults.push({
             lineIndex: i,
             variable: varName,
-            value: parseFloat(valNum.toPrecision(12)).toLocaleString("en-US", {
-              maximumFractionDigits: 4,
-            }),
-            isError: false,
+            value: Number.isNaN(valNum)
+              ? `NaN (valStr: ${JSON.stringify(valStr)})`
+              : parseFloat(valNum.toPrecision(12)).toLocaleString("en-US", {
+                  maximumFractionDigits: 4,
+                }),
+            isError: Number.isNaN(valNum),
           });
         } catch (err) {
           // Skip errors or mark them
         }
       }
 
-      setResults(newResults);
+      if (!isCancelled) {
+        setResults(newResults);
+      }
     })();
   });
 
