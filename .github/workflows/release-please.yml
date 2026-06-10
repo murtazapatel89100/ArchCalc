@@ -86,7 +86,7 @@ jobs:
           provides=('archcalc')
           conflicts=('archcalc')
           source=("\$pkgname-\$pkgver.deb::\$url/releases/download/v\$pkgver/archcalc_\${pkgver}_amd64.deb")
-          sha256sums=('\$SHA256')
+          sha256sums=('${SHA256}')
 
           package() {
             bsdtar -xf "\$srcdir/\$pkgname-\$pkgver.deb" -C "\$srcdir"
