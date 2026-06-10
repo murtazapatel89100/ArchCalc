@@ -2,7 +2,7 @@
 
 ![ArchCalc Logo](./web/src/app/opengraph-image.jpg)
 
-ArchCalc is the definitive workspace and developer tools platform. It integrates a powerful command execution environment, advanced system reading capabilities, and essential developer utilities into a single, cohesive interface.
+ArchCalc is the definitive workspace and developer tools platform. It integrates an interactive Live Notebook calculator, advanced system reading capabilities, and essential developer utilities into a single, cohesive desktop interface for Linux and Windows.
 
 ## Repository Structure
 
