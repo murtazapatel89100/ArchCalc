@@ -1,4 +1,11 @@
-import { ArrowRight, Cpu, Hash, Terminal } from "lucide-react";
+import {
+  ArrowRight,
+  Cpu,
+  Download,
+  Hash,
+  Package,
+  Terminal,
+} from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
 
@@ -72,72 +79,131 @@ export default async function Home() {
             </p>
           </div>
 
-          <div className="grid md:grid-cols-3 gap-8">
+          <div className="flex flex-col gap-12">
             {/* Feature 1 */}
-            <div className="glass-card p-8 flex flex-col items-start text-left group hover:-translate-y-1">
-              <div className="h-12 w-12 rounded-xl bg-blue-500/10 flex items-center justify-center text-blue-400 mb-6 group-hover:scale-110 transition-transform">
-                <Terminal className="h-6 w-6" />
+            <div className="glass-card p-8 md:p-12 flex flex-col md:flex-row items-center gap-8 md:gap-16 text-left group hover:-translate-y-1 transition-all">
+              <div className="flex-1 flex flex-col items-start">
+                <div className="h-16 w-16 rounded-2xl bg-blue-500/10 flex items-center justify-center text-blue-400 mb-8 group-hover:scale-110 transition-transform">
+                  <Terminal className="h-8 w-8" />
+                </div>
+                <h3 className="text-3xl font-bold mb-4 text-white">
+                  Advanced Workspace
+                </h3>
+                <p className="text-zinc-400 text-lg leading-relaxed mb-6">
+                  A unified environment to manage your projects, execute
+                  commands, and orchestrate tasks without ever leaving the
+                  application.
+                </p>
               </div>
-              <h3 className="text-xl font-bold mb-3 text-white">
-                Advanced Workspace
-              </h3>
-              <p className="text-zinc-400 leading-relaxed mb-6 flex-1">
-                A unified environment to manage your projects, execute commands,
-                and orchestrate tasks without ever leaving the application.
-              </p>
-              <div className="relative w-full aspect-video rounded-lg overflow-hidden border border-white/10">
-                <Image
-                  src="https://placehold.co/600x400/0a0a0a/3b82f6?text=Workspace+UI"
-                  alt="Workspace Feature"
-                  fill
-                  className="object-cover"
-                />
+              <div className="flex-1 w-full">
+                <div className="relative w-full aspect-[4/3] md:aspect-video rounded-xl overflow-hidden border border-white/10 shadow-2xl">
+                  <Image
+                    src="/images/workspace.png"
+                    alt="Workspace Feature"
+                    fill
+                    className="object-cover"
+                  />
+                </div>
               </div>
             </div>
 
             {/* Feature 2 */}
-            <div className="glass-card p-8 flex flex-col items-start text-left group hover:-translate-y-1">
-              <div className="h-12 w-12 rounded-xl bg-purple-500/10 flex items-center justify-center text-purple-400 mb-6 group-hover:scale-110 transition-transform">
-                <Cpu className="h-6 w-6" />
+            <div className="glass-card p-8 md:p-12 flex flex-col md:flex-row-reverse items-center gap-8 md:gap-16 text-left group hover:-translate-y-1 transition-all">
+              <div className="flex-1 flex flex-col items-start">
+                <div className="h-16 w-16 rounded-2xl bg-purple-500/10 flex items-center justify-center text-purple-400 mb-8 group-hover:scale-110 transition-transform">
+                  <Cpu className="h-8 w-8" />
+                </div>
+                <h3 className="text-3xl font-bold mb-4 text-white">
+                  System Reading
+                </h3>
+                <p className="text-zinc-400 text-lg leading-relaxed mb-6">
+                  Deep integration with host systems. Read metrics, analyze
+                  architecture, and monitor performance in real-time.
+                </p>
               </div>
-              <h3 className="text-xl font-bold mb-3 text-white">
-                System Reading
-              </h3>
-              <p className="text-zinc-400 leading-relaxed mb-6 flex-1">
-                Deep integration with host systems. Read metrics, analyze
-                architecture, and monitor performance in real-time.
-              </p>
-              <div className="relative w-full aspect-video rounded-lg overflow-hidden border border-white/10">
-                <Image
-                  src="https://placehold.co/600x400/0a0a0a/a855f7?text=System+Metrics"
-                  alt="System Reading Feature"
-                  fill
-                  className="object-cover"
-                />
+              <div className="flex-1 w-full">
+                <div className="relative w-full aspect-[4/3] md:aspect-video rounded-xl overflow-hidden border border-white/10 shadow-2xl">
+                  <Image
+                    src="/images/system.png"
+                    alt="System Reading Feature"
+                    fill
+                    className="object-cover"
+                  />
+                </div>
               </div>
             </div>
 
             {/* Feature 3 */}
-            <div className="glass-card p-8 flex flex-col items-start text-left group hover:-translate-y-1">
-              <div className="h-12 w-12 rounded-xl bg-emerald-500/10 flex items-center justify-center text-emerald-400 mb-6 group-hover:scale-110 transition-transform">
-                <Hash className="h-6 w-6" />
+            <div className="glass-card p-8 md:p-12 flex flex-col md:flex-row items-center gap-8 md:gap-16 text-left group hover:-translate-y-1 transition-all">
+              <div className="flex-1 flex flex-col items-start">
+                <div className="h-16 w-16 rounded-2xl bg-emerald-500/10 flex items-center justify-center text-emerald-400 mb-8 group-hover:scale-110 transition-transform">
+                  <Hash className="h-8 w-8" />
+                </div>
+                <h3 className="text-3xl font-bold mb-4 text-white">
+                  Developer Tools
+                </h3>
+                <p className="text-zinc-400 text-lg leading-relaxed mb-6">
+                  Built-in utilities for hashing, encoding, decoding, and data
+                  transformation. The tools you use every day, instantly
+                  accessible.
+                </p>
               </div>
-              <h3 className="text-xl font-bold mb-3 text-white">
-                Developer Tools
+              <div className="flex-1 w-full">
+                <div className="relative w-full aspect-[4/3] md:aspect-video rounded-xl overflow-hidden border border-white/10 shadow-2xl">
+                  <Image
+                    src="/images/devtools.png"
+                    alt="Dev Tools Feature"
+                    fill
+                    className="object-cover"
+                  />
+                </div>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        {/* Downloads Section */}
+        <section className="w-full max-w-6xl mx-auto py-20 md:py-32 border-t border-white/5">
+          <div className="flex flex-col items-center text-center mb-16">
+            <h2 className="text-3xl md:text-4xl font-bold mb-4">
+              Install ArchCalc
+            </h2>
+            <p className="text-zinc-400 max-w-2xl">
+              Available for your favorite Linux distributions.
+            </p>
+          </div>
+
+          <div className="grid md:grid-cols-2 gap-8 max-w-4xl mx-auto w-full">
+            {/* AUR Card */}
+            <Link
+              href="https://aur.archlinux.org/packages/archcalc"
+              target="_blank"
+              className="glass-card p-8 flex flex-col items-center text-center group hover:-translate-y-1 transition-all"
+            >
+              <div className="h-16 w-16 rounded-2xl bg-blue-500/10 flex items-center justify-center text-blue-400 mb-6 group-hover:scale-110 transition-transform">
+                <Package className="h-8 w-8" />
+              </div>
+              <h3 className="text-2xl font-bold mb-3 text-white">
+                Arch User Repository
               </h3>
-              <p className="text-zinc-400 leading-relaxed mb-6 flex-1">
-                Built-in utilities for hashing, encoding, decoding, and data
-                transformation. The tools you use every day, instantly
-                accessible.
+              <p className="text-zinc-400 mb-6">
+                Install via your favorite AUR helper.
               </p>
-              <div className="relative w-full aspect-video rounded-lg overflow-hidden border border-white/10">
-                <Image
-                  src="https://placehold.co/600x400/0a0a0a/10b981?text=Dev+Utilities"
-                  alt="Dev Tools Feature"
-                  fill
-                  className="object-cover"
-                />
+              <code className="bg-black/30 px-4 py-2 rounded-lg text-blue-300 font-mono text-sm border border-white/5 group-hover:border-blue-500/30 transition-colors">
+                yay -S archcalc
+              </code>
+            </Link>
+
+            {/* Flatpak Card */}
+            <div className="glass-card p-8 flex flex-col items-center text-center group hover:-translate-y-1 transition-all opacity-80 cursor-not-allowed">
+              <div className="h-16 w-16 rounded-2xl bg-white/5 flex items-center justify-center text-zinc-400 mb-6 group-hover:scale-110 transition-transform">
+                <Download className="h-8 w-8" />
               </div>
+              <h3 className="text-2xl font-bold mb-3 text-white">Flatpak</h3>
+              <p className="text-zinc-400 mb-6">Coming soon to Flathub.</p>
+              <code className="bg-black/30 px-4 py-2 rounded-lg text-zinc-500 font-mono text-sm border border-white/5">
+                flatpak install archcalc
+              </code>
             </div>
           </div>
         </section>
