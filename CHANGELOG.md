@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.4.0](https://github.com/murtazapatel89100/ArchCalc/compare/archcalc-v0.3.1...archcalc-v0.4.0) (2026-06-10)
+
+
+### Features
+
+* merge linux release workflow into release-please to resolve github token workflow trigger restrictions ([14f1727](https://github.com/murtazapatel89100/ArchCalc/commit/14f17277a341eabe9d68ccfe7fcdbcc190dedb8a))
+
 ## [0.3.1](https://github.com/murtazapatel89100/ArchCalc/compare/archcalc-v0.3.0...archcalc-v0.3.1) (2026-06-10)
 
 
