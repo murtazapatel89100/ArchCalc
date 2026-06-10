@@ -90,45 +90,49 @@ export function WorkspacesScreen() {
     }
 
     const lines = w.content.split("\n");
-    const newResults: LiveResult[] = [];
-    const context: Record<string, number> = {};
 
-    lines.forEach((line, i) => {
-      const trimmed = line.trim();
-      if (!trimmed || trimmed.startsWith("//")) return;
+    (async () => {
+      const newResults: LiveResult[] = [];
+      const context: Record<string, number> = {};
 
-      try {
-        let varName: string | undefined;
-        let exprToEval = trimmed;
+      for (let i = 0; i < lines.length; i++) {
+        const line = lines[i];
+        const trimmed = line.trim();
+        if (!trimmed || trimmed.startsWith("//")) continue;
 
-        // Check for assignment: var = expression
-        const assignMatch = trimmed.match(/^([a-zA-Z_]\w*)\s*=\s*(.*)$/);
-        if (assignMatch) {
-          varName = assignMatch[1];
-          exprToEval = assignMatch[2];
+        try {
+          let varName: string | undefined;
+          let exprToEval = trimmed;
+
+          // Check for assignment: var = expression
+          const assignMatch = trimmed.match(/^([a-zA-Z_]\w*)\s*=\s*(.*)$/);
+          if (assignMatch) {
+            varName = assignMatch[1];
+            exprToEval = assignMatch[2];
+          }
+
+          const valStr = await evaluator.math(exprToEval, context);
+          const valNum = parseFloat(valStr);
+
+          if (varName && !Number.isNaN(valNum)) {
+            context[varName] = valNum;
+          }
+
+          newResults.push({
+            lineIndex: i,
+            variable: varName,
+            value: parseFloat(valNum.toPrecision(12)).toLocaleString("en-US", {
+              maximumFractionDigits: 4,
+            }),
+            isError: false,
+          });
+        } catch (err) {
+          // Skip errors or mark them
         }
-
-        const valStr = evaluator.math(exprToEval, context);
-        const valNum = parseFloat(valStr);
-
-        if (varName && !Number.isNaN(valNum)) {
-          context[varName] = valNum;
-        }
-
-        newResults.push({
-          lineIndex: i,
-          variable: varName,
-          value: parseFloat(valNum.toPrecision(12)).toLocaleString("en-US", {
-            maximumFractionDigits: 4,
-          }),
-          isError: false,
-        });
-      } catch (err) {
-        // Skip errors or mark them
       }
-    });
 
-    setResults(newResults);
+      setResults(newResults);
+    })();
   });
 
   return (
