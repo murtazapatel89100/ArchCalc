@@ -1,0 +1,101 @@
+name: Release Linux & Publish to AUR
+
+on:
+  release:
+    types: [published]
+
+jobs:
+  build-and-publish:
+    runs-on: ubuntu-22.04
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v6
+
+      - name: Install dependencies (Ubuntu)
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libwebkit2gtk-4.1-dev build-essential curl wget file libxdo-dev libssl-dev libayatana-appindicator3-dev librsvg2-dev
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v6.0.0
+        with:
+          node-version: 20
+
+      - name: Install pnpm
+        uses: pnpm/action-setup@v6
+        with:
+          version: 8
+
+      - name: Install Rust stable
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Install Frontend Dependencies
+        working-directory: ./app
+        run: pnpm install
+
+      - name: Build Tauri App & Upload to Release
+        uses: tauri-apps/tauri-action@v0
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          projectPath: ./app
+          tagName: ${{ github.ref_name }}
+          releaseId: ${{ github.event.release.id }}
+          includeRelease: true
+          includeUpdaterJson: false
+
+      - name: Generate PKGBUILD for AUR
+        run: |
+          VERSION=${GITHUB_REF_NAME#v}
+
+          # Find the generated deb file so we can hash it
+          DEB_FILE=$(find ./app/src-tauri/target/release/bundle/deb -name "*.deb" | head -n 1)
+          SHA256=$(sha256sum "$DEB_FILE" | awk '{ print $1 }')
+
+          mkdir -p aur_pkg
+          cat << EOF > aur_pkg/PKGBUILD
+          pkgname=archcalc
+          pkgver=$VERSION
+          pkgrel=1
+          pkgdesc="Built with precision. The definitive workspace and dev tools platform."
+          arch=('x86_64')
+          url="https://github.com/${{ github.repository }}"
+          license=('MIT')
+          depends=('webkit2gtk-4.1' 'gtk3' 'cairo' 'pango' 'glib2' 'openssl' 'libayatana-appindicator')
+          provides=('archcalc')
+          conflicts=('archcalc')
+          source=("\$pkgname-\$pkgver.deb::\$url/releases/download/v\$pkgver/archcalc_\${pkgver}_amd64.deb")
+          sha256sums=('\$SHA256')
+
+          package() {
+            bsdtar -xf "\$srcdir/\$pkgname-\$pkgver.deb" -C "\$srcdir"
+            
+            # The data tarball might be compressed with different algorithms
+            if [ -f "\$srcdir/data.tar.gz" ]; then
+              tar -xzf "\$srcdir/data.tar.gz" -C "\$pkgdir"
+            elif [ -f "\$srcdir/data.tar.xz" ]; then
+              tar -xJf "\$srcdir/data.tar.xz" -C "\$pkgdir"
+            elif [ -f "\$srcdir/data.tar.zst" ]; then
+              tar -I zstd -xf "\$srcdir/data.tar.zst" -C "\$pkgdir"
+            fi
+          }
+          EOF
+
+      - name: Publish to AUR
+        uses: KSXGitHub/github-actions-deploy-aur@v4.0.0
+        with:
+          pkgname: archcalc
+          pkgbuild: ./aur_pkg/PKGBUILD
+          commit_username: github-actions[bot]
+          commit_email: github-actions[bot]@users.noreply.github.com
+          ssh_private_key: ${{ secrets.AUR_PUBLISHABLE_KEY }}
+          commit_message: "Release v${{ github.ref_name }}"
+
+      - name: Output Summary
+        run: |
+          echo "## Release Summary :rocket:" >> $GITHUB_STEP_SUMMARY
+          echo "Successfully built the Linux artifacts (.deb, .AppImage) and attached them to the GitHub release!" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### AUR Publishing" >> $GITHUB_STEP_SUMMARY
+          echo "Published **archcalc** to the Arch User Repository." >> $GITHUB_STEP_SUMMARY
+          echo "- **AUR URL**: https://aur.archlinux.org/packages/archcalc" >> $GITHUB_STEP_SUMMARY

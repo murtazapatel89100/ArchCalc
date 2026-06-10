@@ -1,5 +1,7 @@
-import { Book, Calculator } from "lucide-react";
+import { Book } from "lucide-react";
+import Image from "next/image";
 import Link from "next/link";
+import { siteConfig } from "@/config/site";
 
 export function Navbar() {
   return (
@@ -9,21 +11,30 @@ export function Navbar() {
           href="/"
           className="flex items-center gap-2 transition-opacity hover:opacity-80"
         >
-          <Calculator className="h-6 w-6 text-blue-500" />
+          <Image
+            src="/logo.png"
+            alt="ArchCalc Logo"
+            width={24}
+            height={24}
+            className="h-6 w-6 object-contain"
+          />
           <span className="text-xl font-bold tracking-tight text-white">
-            ArchCalc
+            {siteConfig.name}
           </span>
         </Link>
         <nav className="ml-auto flex items-center gap-6 text-sm font-medium">
-          <Link
-            href="/docs"
-            className="text-zinc-300 transition-colors hover:text-white flex items-center gap-2"
-          >
-            <Book className="h-4 w-4" />
-            <span className="hidden sm:inline">Documentation</span>
-          </Link>
+          {siteConfig.nav.map((item) => (
+            <Link
+              key={item.href}
+              href={item.href}
+              className="text-zinc-300 transition-colors hover:text-white flex items-center gap-2"
+            >
+              <Book className="h-4 w-4" />
+              <span className="hidden sm:inline">{item.name}</span>
+            </Link>
+          ))}
           <a
-            href="https://github.com/murtazapatel89100/ArchCalc"
+            href={siteConfig.links.github}
             target="_blank"
             rel="noreferrer"
             className="text-zinc-300 transition-colors hover:text-white"

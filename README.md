@@ -1,6 +1,6 @@
 # ArchCalc
 
-![ArchCalc Logo](https://placehold.co/1200x300/0a0a0a/3b82f6?text=ArchCalc)
+![ArchCalc Logo](./web/src/app/opengraph-image.jpg)
 
 ArchCalc is the definitive workspace and developer tools platform. It integrates a powerful command execution environment, advanced system reading capabilities, and essential developer utilities into a single, cohesive interface.
 

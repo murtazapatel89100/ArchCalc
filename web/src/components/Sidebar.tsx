@@ -9,13 +9,7 @@ function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs));
 }
 
-const docsLinks = [
-  { name: "Introduction", href: "/docs" },
-  { name: "Getting Started", href: "/docs/getting-started" },
-  { name: "Workspace", href: "/docs/workspace" },
-  { name: "System Reading", href: "/docs/system-reading" },
-  { name: "Dev Tools", href: "/docs/dev-tools" },
-];
+import { siteConfig } from "@/config/site";
 
 export function Sidebar() {
   const pathname = usePathname();
@@ -27,7 +21,7 @@ export function Sidebar() {
           Documentation
         </h3>
         <nav className="flex flex-col gap-1">
-          {docsLinks.map((link) => (
+          {siteConfig.sidebar.map((link) => (
             <Link
               key={link.href}
               href={link.href}

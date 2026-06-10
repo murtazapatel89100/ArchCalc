@@ -15,9 +15,43 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
+  metadataBase: new URL(
+    process.env.NEXT_PUBLIC_BASE_URL || "https://archcalc.com",
+  ),
   title: "ArchCalc | Advanced Workspace & Dev Tools",
   description:
     "The definitive workspace and dev tools platform for system reading, hashing, and more.",
+  keywords: [
+    "developer tools",
+    "workspace",
+    "system reading",
+    "command execution",
+    "calculator",
+    "productivity",
+  ],
+  authors: [{ name: "ArchCalc Team" }],
+  creator: "ArchCalc",
+  publisher: "ArchCalc",
+  openGraph: {
+    title: "ArchCalc | Advanced Workspace & Dev Tools",
+    description: "The definitive workspace and dev tools platform.",
+    url: "/",
+    siteName: "ArchCalc",
+    locale: "en_US",
+    type: "website",
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "ArchCalc | Advanced Workspace & Dev Tools",
+    description: "The definitive workspace and dev tools platform.",
+    creator: "@ArchCalc",
+  },
+  icons: {
+    icon: [
+      { url: "/icons/favicon-32x32.png", sizes: "32x32", type: "image/png" },
+      { url: "/icons/favicon-16x16.png", sizes: "16x16", type: "image/png" },
+    ],
+  },
 };
 
 export default function RootLayout({
