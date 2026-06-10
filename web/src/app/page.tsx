@@ -2,7 +2,25 @@ import { ArrowRight, Cpu, Hash, Terminal } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
 
-export default function Home() {
+async function getLatestRelease() {
+  try {
+    const res = await fetch(
+      "https://api.github.com/repos/murtazapatel89100/ArchCalc/releases/latest",
+      {
+        next: { revalidate: 3600 },
+      },
+    );
+    if (!res.ok) return "v1.0.0";
+    const data = await res.json();
+    return data.tag_name || "v1.0.0";
+  } catch (error) {
+    return "v1.0.0";
+  }
+}
+
+export default async function Home() {
+  const latestVersion = await getLatestRelease();
+
   return (
     <div className="flex flex-col flex-1 relative overflow-hidden">
       {/* Background Gradients */}
@@ -15,7 +33,7 @@ export default function Home() {
         <section className="w-full max-w-6xl mx-auto py-24 md:py-32 lg:py-40 flex flex-col items-center text-center gap-8">
           <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full glass border-blue-500/30 text-blue-300 text-sm font-medium mb-4">
             <span className="flex h-2 w-2 rounded-full bg-blue-500 animate-pulse"></span>
-            ArchCalc v1.0 is now live
+            ArchCalc {latestVersion} is now live
           </div>
           <h1 className="text-5xl md:text-7xl font-extrabold tracking-tight text-transparent bg-clip-text bg-gradient-to-br from-white to-zinc-500 max-w-4xl">
             The Definitive <br className="hidden md:block" />

@@ -3,6 +3,9 @@
     ".": {
       "release-type": "node",
       "package-name": "archcalc",
+      "exclude-paths": [
+        "web/"
+      ],
       "extra-files": [
         {
           "type": "json",
@@ -18,6 +21,11 @@
           "type": "toml",
           "path": "app/src-tauri/Cargo.toml",
           "jsonpath": "$.package.version"
+        },
+        {
+          "type": "json",
+          "path": "app/src-tauri/tauri.conf.json",
+          "jsonpath": "$.version"
         }
       ]
     }
