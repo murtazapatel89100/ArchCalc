@@ -1,5 +1,17 @@
 # Changelog
 
+## [0.6.0](https://github.com/murtazapatel89100/ArchCalc/compare/archcalc-v0.5.0...archcalc-v0.6.0) (2026-06-10)
+
+
+### Features
+
+* **web:** add direct download card and display total download count ([14361b9](https://github.com/murtazapatel89100/ArchCalc/commit/14361b999b40245e7ff848935d9270e07163dc69))
+
+
+### Bug Fixes
+
+* **app:** add debug info for NaN and fix race condition in live results ([5eefd30](https://github.com/murtazapatel89100/ArchCalc/commit/5eefd30f48f72b656d0c45cc214f60b70eb8a615))
+
 ## [0.5.0](https://github.com/murtazapatel89100/ArchCalc/compare/archcalc-v0.4.3...archcalc-v0.5.0) (2026-06-10)
 
 
