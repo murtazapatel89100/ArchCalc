@@ -1,5 +1,13 @@
 # Changelog
 
+## [0.4.1](https://github.com/murtazapatel89100/ArchCalc/compare/archcalc-v0.4.0...archcalc-v0.4.1) (2026-06-10)
+
+
+### Bug Fixes
+
+* correctly sync tauri config version to 0.4.0 to match the latest release ([5e7e9c8](https://github.com/murtazapatel89100/ArchCalc/commit/5e7e9c87394977dc84c87d5c78d8c4896c6ca24a))
+* sync tauri config version and exclude web from releases ([36b0b61](https://github.com/murtazapatel89100/ArchCalc/commit/36b0b61aaff437ca0f34d57c7dec3fdea51e4641))
+
 ## [0.4.0](https://github.com/murtazapatel89100/ArchCalc/compare/archcalc-v0.3.1...archcalc-v0.4.0) (2026-06-10)
 
 
