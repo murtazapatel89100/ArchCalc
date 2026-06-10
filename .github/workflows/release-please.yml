@@ -114,9 +114,9 @@ jobs:
 
       - name: Output Summary
         run: |
-          echo "## Release Summary :rocket:" >> $GITHUB_STEP_SUMMARY
-          echo "Successfully built the Linux artifacts (.deb, .AppImage) and attached them to the GitHub release!" >> $GITHUB_STEP_SUMMARY
+          echo "## Deployment Summary :rocket:" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
-          echo "### AUR Publishing" >> $GITHUB_STEP_SUMMARY
-          echo "Published **archcalc** to the Arch User Repository." >> $GITHUB_STEP_SUMMARY
-          echo "- **AUR URL**: https://aur.archlinux.org/packages/archcalc" >> $GITHUB_STEP_SUMMARY
+          echo "| Platform | Target | Status | Link |" >> $GITHUB_STEP_SUMMARY
+          echo "|----------|--------|--------|------|" >> $GITHUB_STEP_SUMMARY
+          echo "| 🐙 GitHub | Releases | ✅ Built & Attached | [View Release](https://github.com/${{ github.repository }}/releases) |" >> $GITHUB_STEP_SUMMARY
+          echo "| 🐧 Arch Linux | AUR | ✅ Published | [archcalc](https://aur.archlinux.org/packages/archcalc) |" >> $GITHUB_STEP_SUMMARY
