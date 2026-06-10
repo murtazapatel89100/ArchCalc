@@ -1,5 +1,17 @@
 # Changelog
 
+## [0.5.0](https://github.com/murtazapatel89100/ArchCalc/compare/archcalc-v0.4.3...archcalc-v0.5.0) (2026-06-10)
+
+
+### Features
+
+* **web:** update UI to vertical stack feature cards and add download section ([7a036dd](https://github.com/murtazapatel89100/ArchCalc/commit/7a036dd45937cf60f8d4cbc210a886860adf996b))
+
+
+### Bug Fixes
+
+* **app:** await evaluator.math in Live Results to fix NaN bug ([f6515cb](https://github.com/murtazapatel89100/ArchCalc/commit/f6515cb73e2964907f5fe9aeeb4895351fd4d967))
+
 ## [0.4.3](https://github.com/murtazapatel89100/ArchCalc/compare/archcalc-v0.4.2...archcalc-v0.4.3) (2026-06-10)
 
 
