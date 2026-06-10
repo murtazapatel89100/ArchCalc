@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.7.0](https://github.com/murtazapatel89100/ArchCalc/compare/archcalc-v0.6.0...archcalc-v0.7.0) (2026-06-10)
+
+
+### Features
+
+* **web:** os-aware downloads and windows release config ([f1cc658](https://github.com/murtazapatel89100/ArchCalc/commit/f1cc658d923956968239a553d53065cdaf904129))
+
 ## [0.6.0](https://github.com/murtazapatel89100/ArchCalc/compare/archcalc-v0.5.0...archcalc-v0.6.0) (2026-06-10)
 
 
