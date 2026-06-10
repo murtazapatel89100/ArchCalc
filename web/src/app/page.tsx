@@ -1,12 +1,4 @@
-import {
-  ArrowRight,
-  Cpu,
-  Download,
-  Hash,
-  Monitor,
-  Package,
-  Terminal,
-} from "lucide-react";
+import { ArrowRight, Cpu, Download, Hash, Terminal } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
 import DownloadSection from "@/components/DownloadSection";
@@ -22,7 +14,7 @@ async function getLatestRelease() {
     if (!res.ok) return "v1.0.0";
     const data = await res.json();
     return data.tag_name || "v1.0.0";
-  } catch (error) {
+  } catch (_error) {
     return "v1.0.0";
   }
 }
@@ -44,7 +36,7 @@ async function getTotalDownloads() {
       }
     }
     return count;
-  } catch (error) {
+  } catch (_error) {
     return 0;
   }
 }
