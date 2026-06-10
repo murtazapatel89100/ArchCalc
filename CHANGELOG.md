@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.4.3](https://github.com/murtazapatel89100/ArchCalc/compare/archcalc-v0.4.2...archcalc-v0.4.3) (2026-06-10)
+
+
+### Bug Fixes
+
+* **aur:** disable updpkgsums in aur deploy action to prevent hash overwriting ([e797b0e](https://github.com/murtazapatel89100/ArchCalc/commit/e797b0e06759776f89dd94ef520351b9619379ce))
+
 ## [0.4.2](https://github.com/murtazapatel89100/ArchCalc/compare/archcalc-v0.4.1...archcalc-v0.4.2) (2026-06-10)
 
 
