@@ -1,5 +1,17 @@
 # Changelog
 
+## [0.3.0](https://github.com/murtazapatel89100/ArchCalc/compare/archcalc-v0.2.0...archcalc-v0.3.0) (2026-06-10)
+
+
+### Features
+
+* major updates to SEO, CI, and release pipelines ([22a39d7](https://github.com/murtazapatel89100/ArchCalc/commit/22a39d76cbd54c51149453c3a6d52cafce13ebe1))
+
+
+### Bug Fixes
+
+* pnpm action version parsing issue ([94f1f4b](https://github.com/murtazapatel89100/ArchCalc/commit/94f1f4bef206402daf93c28a15459b92f66c8d70))
+
 ## [0.2.0](https://github.com/murtazapatel89100/ArchCalc/compare/archcalc-v0.1.0...archcalc-v0.2.0) (2026-06-07)
 
 
