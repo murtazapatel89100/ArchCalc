@@ -24,7 +24,6 @@ jobs:
       - name: Install pnpm
         uses: pnpm/action-setup@v6
         with:
-          version: 9
           standalone: true
 
       - name: Install Rust stable
