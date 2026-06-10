@@ -1,5 +1,16 @@
 # Changelog
 
+## [0.3.1](https://github.com/murtazapatel89100/ArchCalc/compare/archcalc-v0.3.0...archcalc-v0.3.1) (2026-06-10)
+
+
+### Bug Fixes
+
+* enforce standalone pnpm binary installation ([83613e3](https://github.com/murtazapatel89100/ArchCalc/commit/83613e36b3ceb930abc9cfde6fc87bec432d3c0a))
+* grant contents write permission to release workflow for binary uploads ([0975ea0](https://github.com/murtazapatel89100/ArchCalc/commit/0975ea086c737e59deab88c485c0f953d70f8746))
+* pin pnpm action version to specific semver ([27083ad](https://github.com/murtazapatel89100/ArchCalc/commit/27083ad44cca6f31dd3baa02aeea68a68260ed5c))
+* remove explicit version input to resolve pnpm version mismatch ([0237896](https://github.com/murtazapatel89100/ArchCalc/commit/023789634db73b82655d9df026a1f08312d0cdce))
+* use corepack via packageManager field for pnpm setup ([ef88b17](https://github.com/murtazapatel89100/ArchCalc/commit/ef88b173d7367e90c49b65f60e2b89fc6fcbf4c9))
+
 ## [0.3.0](https://github.com/murtazapatel89100/ArchCalc/compare/archcalc-v0.2.0...archcalc-v0.3.0) (2026-06-10)
 
 
