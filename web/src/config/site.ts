@@ -1,7 +1,7 @@
 export const siteConfig = {
   name: "ArchCalc",
   description:
-    "Built with precision. The definitive workspace and dev tools platform.",
+    "A fast, lightweight, and extensible desktop calculator built with Rust, Tauri, and SolidJS.",
   links: {
     github: "https://github.com/murtazapatel89100/ArchCalc",
     docs: "/docs",
@@ -17,8 +17,6 @@ export const siteConfig = {
   sidebar: [
     { name: "Introduction", href: "/docs" },
     { name: "Getting Started", href: "/docs/getting-started" },
-    { name: "Workspace", href: "/docs/workspace" },
-    { name: "System Reading", href: "/docs/system-reading" },
-    { name: "Dev Tools", href: "/docs/dev-tools" },
+    { name: "Architecture", href: "/docs/architecture" },
   ],
 };

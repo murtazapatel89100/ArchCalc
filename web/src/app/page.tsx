@@ -1,5 +1,4 @@
 import { ArrowRight, Cpu, Download, Hash, Terminal } from "lucide-react";
-import Image from "next/image";
 import Link from "next/link";
 import DownloadSection from "@/components/DownloadSection";
 
@@ -68,13 +67,13 @@ export default async function Home() {
             )}
           </div>
           <h1 className="text-5xl md:text-7xl font-extrabold tracking-tight text-transparent bg-clip-text bg-gradient-to-br from-white to-zinc-500 max-w-4xl">
-            The Definitive <br className="hidden md:block" />
-            <span className="text-gradient">Workspace Platform</span>
+            A Blazing Fast <br className="hidden md:block" />
+            <span className="text-gradient">Desktop Calculator</span>
           </h1>
           <p className="max-w-2xl text-lg md:text-xl text-zinc-400">
-            Empower your workflow with advanced system reading, comprehensive
-            developer tools, and an integrated workspace environment designed
-            for maximum efficiency.
+            A lightweight, extensible desktop calculator built with Rust, Tauri,
+            and SolidJS. Parse and evaluate complex mathematical expressions
+            instantly.
           </p>
           <div className="flex flex-col sm:flex-row gap-4 mt-4 w-full sm:w-auto">
             <Link
@@ -96,93 +95,59 @@ export default async function Home() {
         <section className="w-full max-w-6xl mx-auto py-20 md:py-32 border-t border-white/5">
           <div className="flex flex-col items-center text-center mb-16">
             <h2 className="text-3xl md:text-4xl font-bold mb-4">
-              Everything you need, built-in.
+              Powered by Rust
             </h2>
             <p className="text-zinc-400 max-w-2xl">
-              ArchCalc combines essential development utilities into a single,
-              cohesive interface.
+              ArchCalc combines a custom AST evaluator written in Rust with a
+              beautifully responsive SolidJS UI.
             </p>
           </div>
 
-          <div className="flex flex-col gap-12">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6 md:gap-8">
             {/* Feature 1 */}
-            <div className="glass-card p-8 md:p-12 flex flex-col md:flex-row items-center gap-8 md:gap-16 text-left group hover:-translate-y-1 transition-all">
-              <div className="flex-1 flex flex-col items-start">
-                <div className="h-16 w-16 rounded-2xl bg-blue-500/10 flex items-center justify-center text-blue-400 mb-8 group-hover:scale-110 transition-transform">
-                  <Terminal className="h-8 w-8" />
-                </div>
-                <h3 className="text-3xl font-bold mb-4 text-white">
-                  Advanced Workspace
-                </h3>
-                <p className="text-zinc-400 text-lg leading-relaxed mb-6">
-                  A unified environment to manage your projects, execute
-                  commands, and orchestrate tasks without ever leaving the
-                  application.
-                </p>
+            <div className="glass-card relative p-8 rounded-2xl flex flex-col items-start text-left group hover:-translate-y-2 transition-all duration-300 border border-white/5 hover:border-blue-500/30 overflow-hidden">
+              <div className="absolute inset-0 bg-gradient-to-br from-blue-500/10 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
+              <div className="h-14 w-14 rounded-xl bg-blue-500/10 flex items-center justify-center text-blue-400 mb-6 group-hover:scale-110 transition-transform duration-300 relative z-10">
+                <Terminal className="h-7 w-7" />
               </div>
-              <div className="flex-1 w-full">
-                <div className="relative w-full aspect-[4/3] md:aspect-video rounded-xl overflow-hidden border border-white/10 shadow-2xl">
-                  <Image
-                    src="/images/workspace.png"
-                    alt="Workspace Feature"
-                    fill
-                    className="object-cover"
-                  />
-                </div>
-              </div>
+              <h3 className="text-2xl font-bold mb-3 text-white relative z-10">
+                Custom AST Evaluator
+              </h3>
+              <p className="text-zinc-400 text-base leading-relaxed relative z-10">
+                Core logic for expression parsing and evaluation is built from
+                scratch in Rust, guaranteeing maximum performance and memory
+                safety.
+              </p>
             </div>
 
             {/* Feature 2 */}
-            <div className="glass-card p-8 md:p-12 flex flex-col md:flex-row-reverse items-center gap-8 md:gap-16 text-left group hover:-translate-y-1 transition-all">
-              <div className="flex-1 flex flex-col items-start">
-                <div className="h-16 w-16 rounded-2xl bg-purple-500/10 flex items-center justify-center text-purple-400 mb-8 group-hover:scale-110 transition-transform">
-                  <Cpu className="h-8 w-8" />
-                </div>
-                <h3 className="text-3xl font-bold mb-4 text-white">
-                  System Reading
-                </h3>
-                <p className="text-zinc-400 text-lg leading-relaxed mb-6">
-                  Deep integration with host systems. Read metrics, analyze
-                  architecture, and monitor performance in real-time.
-                </p>
+            <div className="glass-card relative p-8 rounded-2xl flex flex-col items-start text-left group hover:-translate-y-2 transition-all duration-300 border border-white/5 hover:border-purple-500/30 overflow-hidden">
+              <div className="absolute inset-0 bg-gradient-to-br from-purple-500/10 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
+              <div className="h-14 w-14 rounded-xl bg-purple-500/10 flex items-center justify-center text-purple-400 mb-6 group-hover:scale-110 transition-transform duration-300 relative z-10">
+                <Cpu className="h-7 w-7" />
               </div>
-              <div className="flex-1 w-full">
-                <div className="relative w-full aspect-[4/3] md:aspect-video rounded-xl overflow-hidden border border-white/10 shadow-2xl">
-                  <Image
-                    src="/images/system.png"
-                    alt="System Reading Feature"
-                    fill
-                    className="object-cover"
-                  />
-                </div>
-              </div>
+              <h3 className="text-2xl font-bold mb-3 text-white relative z-10">
+                Tauri Framework
+              </h3>
+              <p className="text-zinc-400 text-base leading-relaxed relative z-10">
+                Packaged using Tauri for a native desktop experience with a tiny
+                footprint. Fast IPC bridge between the UI and Rust backend.
+              </p>
             </div>
 
             {/* Feature 3 */}
-            <div className="glass-card p-8 md:p-12 flex flex-col md:flex-row items-center gap-8 md:gap-16 text-left group hover:-translate-y-1 transition-all">
-              <div className="flex-1 flex flex-col items-start">
-                <div className="h-16 w-16 rounded-2xl bg-emerald-500/10 flex items-center justify-center text-emerald-400 mb-8 group-hover:scale-110 transition-transform">
-                  <Hash className="h-8 w-8" />
-                </div>
-                <h3 className="text-3xl font-bold mb-4 text-white">
-                  Developer Tools
-                </h3>
-                <p className="text-zinc-400 text-lg leading-relaxed mb-6">
-                  Built-in utilities for hashing, encoding, decoding, and data
-                  transformation. The tools you use every day, instantly
-                  accessible.
-                </p>
+            <div className="glass-card relative p-8 rounded-2xl flex flex-col items-start text-left group hover:-translate-y-2 transition-all duration-300 border border-white/5 hover:border-emerald-500/30 overflow-hidden">
+              <div className="absolute inset-0 bg-gradient-to-br from-emerald-500/10 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
+              <div className="h-14 w-14 rounded-xl bg-emerald-500/10 flex items-center justify-center text-emerald-400 mb-6 group-hover:scale-110 transition-transform duration-300 relative z-10">
+                <Hash className="h-7 w-7" />
               </div>
-              <div className="flex-1 w-full">
-                <div className="relative w-full aspect-[4/3] md:aspect-video rounded-xl overflow-hidden border border-white/10 shadow-2xl">
-                  <Image
-                    src="/images/devtools.png"
-                    alt="Dev Tools Feature"
-                    fill
-                    className="object-cover"
-                  />
-                </div>
-              </div>
+              <h3 className="text-2xl font-bold mb-3 text-white relative z-10">
+                Persistent History
+              </h3>
+              <p className="text-zinc-400 text-base leading-relaxed relative z-10">
+                Your calculations are safely stored locally on your machine via
+                the Rust file storage API, ensuring you never lose your work.
+              </p>
             </div>
           </div>
         </section>
