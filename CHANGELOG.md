@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.0.1](https://github.com/murtazapatel89100/ArchCalc/compare/archcalc-v1.0.0...archcalc-v1.0.1) (2026-06-30)
+
+
+### Bug Fixes
+
+* resolve broken dev tools, converter bugs, and UI polish ([f292b06](https://github.com/murtazapatel89100/ArchCalc/commit/f292b06689813f67b6547dfc169f0ee5a7db91c6))
+
 ## [0.7.0](https://github.com/murtazapatel89100/ArchCalc/compare/archcalc-v0.6.0...archcalc-v0.7.0) (2026-06-10)
 
 
