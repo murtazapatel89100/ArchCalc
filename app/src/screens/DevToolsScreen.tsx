@@ -1,3 +1,5 @@
+import { Base64 } from "js-base64";
+import { sha256 } from "js-sha256";
 import {
   ArrowLeft,
   Binary,
@@ -13,8 +15,15 @@ import {
 } from "lucide-solid";
 import { createEffect, createSignal, For, Show } from "solid-js";
 import { Dynamic } from "solid-js/web";
+import { v4 as uuidv4 } from "uuid";
 import { cn } from "../utils/cn";
-import { evaluator } from "../utils/evaluator";
+
+const subtleHash = (algo: string, text: string): Promise<string> =>
+  crypto.subtle.digest(algo, new TextEncoder().encode(text)).then((buf) =>
+    Array.from(new Uint8Array(buf))
+      .map((b) => b.toString(16).padStart(2, "0"))
+      .join(""),
+  );
 
 const tools = [
   {
@@ -170,57 +179,98 @@ function ToolInterface(props: { toolId: string }) {
   const [input, setInput] = createSignal("");
   const [output, setOutput] = createSignal("");
   const [copied, setCopied] = createSignal(false);
+
+  const initialMode = () => {
+    if (props.toolId === "hash") return "sha256";
+    if (props.toolId === "timestamp") return "epoch_to_date";
+    return "encode";
+  };
+
   const [mode, setMode] = createSignal<
-    "encode" | "decode" | "sha256" | "sha1" | "sha512"
-  >("encode");
+    | "encode"
+    | "decode"
+    | "sha256"
+    | "sha1"
+    | "sha512"
+    | "epoch_to_date"
+    | "date_to_epoch"
+  >(initialMode() as any);
 
   createEffect(() => {
-    try {
-      const currentToolId = props.toolId;
-      const currentInput = input();
-      const currentMode = mode();
+    const currentToolId = props.toolId;
+    const currentInput = input();
+    const currentMode = mode();
 
-      if (currentToolId === "hash") {
-        if (!currentInput) setOutput("");
-        else {
-          const res = evaluator.process(`${currentMode} ${currentInput}`);
-          setOutput(res?.value || "");
+    if (currentToolId === "hash") {
+      if (!currentInput) {
+        setOutput("");
+        return;
+      }
+      if (currentMode === "sha256") {
+        setOutput(sha256(currentInput));
+      } else {
+        const algoName = currentMode === "sha1" ? "SHA-1" : "SHA-512";
+        subtleHash(algoName, currentInput).then(setOutput);
+      }
+    } else if (currentToolId === "uuid") {
+      if (!output()) setOutput(uuidv4());
+    } else if (currentToolId === "base64") {
+      if (!currentInput) {
+        setOutput("");
+        return;
+      }
+      if (currentMode === "encode") {
+        setOutput(Base64.encode(currentInput));
+      } else {
+        try {
+          setOutput(Base64.decode(currentInput));
+        } catch {
+          setOutput("Invalid Base64");
         }
-      } else if (currentToolId === "uuid") {
-        if (!output()) {
-          const res = evaluator.process("uuid");
-          setOutput(res?.value || "");
-        }
-      } else if (currentToolId === "base64") {
-        if (!currentInput) setOutput("");
-        else {
-          const res = evaluator.process(
-            `base64 ${currentMode} ${currentInput}`,
-          );
-          setOutput(res?.value || "");
-        }
-      } else if (currentToolId === "timestamp") {
+      }
+    } else if (currentToolId === "timestamp") {
+      if (currentMode === "epoch_to_date") {
         if (!currentInput) {
           setOutput(Date.now().toString());
         } else {
           const num = parseInt(currentInput, 10);
           if (!Number.isNaN(num)) {
-            // handle seconds or ms
             const ms = currentInput.length < 13 ? num * 1000 : num;
             setOutput(new Date(ms).toISOString());
           } else {
             setOutput("Invalid timestamp");
           }
         }
-      } else if (currentToolId === "json") {
-        if (!currentInput) setOutput("");
-        else {
-          const obj = JSON.parse(currentInput);
-          setOutput(JSON.stringify(obj, null, 2));
+      } else {
+        if (!currentInput) {
+          setOutput("");
+          return;
         }
-      } else if (currentToolId === "binary") {
-        if (!currentInput) setOutput("");
-        else if (currentMode === "encode") {
+        const d = new Date(currentInput);
+        if (!Number.isNaN(d.getTime())) {
+          setOutput(d.getTime().toString());
+        } else {
+          setOutput("Invalid date");
+        }
+      }
+    } else if (currentToolId === "json") {
+      if (!currentInput) {
+        setOutput("");
+        return;
+      }
+      try {
+        const obj = JSON.parse(currentInput);
+        setOutput(JSON.stringify(obj, null, 2));
+      } catch (e) {
+        setOutput(`⚠ ${(e as Error).message}`);
+      }
+    } else if (currentToolId === "binary") {
+      if (!currentInput) {
+        setOutput("");
+        return;
+      }
+      try {
+        if (currentMode === "encode") {
           setOutput(
             currentInput
               .split("")
@@ -235,9 +285,16 @@ function ToolInterface(props: { toolId: string }) {
               .join(""),
           );
         }
-      } else if (currentToolId === "hex") {
-        if (!currentInput) setOutput("");
-        else if (currentMode === "encode") {
+      } catch {
+        setOutput("Invalid input");
+      }
+    } else if (currentToolId === "hex") {
+      if (!currentInput) {
+        setOutput("");
+        return;
+      }
+      try {
+        if (currentMode === "encode") {
           setOutput(
             currentInput
               .split("")
@@ -252,19 +309,20 @@ function ToolInterface(props: { toolId: string }) {
               .join(""),
           );
         }
-      } else if (currentToolId === "storage") {
-        if (!currentInput) setOutput("");
-        else {
-          const bytes = parseInt(currentInput, 10);
-          if (!Number.isNaN(bytes)) {
-            setOutput(
-              `KB: ${(bytes / 1024).toFixed(2)}\nMB: ${(bytes / 1024 ** 2).toFixed(2)}\nGB: ${(bytes / 1024 ** 3).toFixed(2)}\nTB: ${(bytes / 1024 ** 4).toFixed(2)}`,
-            );
-          }
-        }
+      } catch {
+        setOutput("Invalid input");
       }
-    } catch (e) {
-      setOutput("Error or invalid input");
+    } else if (currentToolId === "storage") {
+      if (!currentInput) {
+        setOutput("");
+        return;
+      }
+      const bytes = parseInt(currentInput, 10);
+      if (!Number.isNaN(bytes)) {
+        setOutput(
+          `KB: ${(bytes / 1024).toFixed(2)}\nMB: ${(bytes / 1024 ** 2).toFixed(2)}\nGB: ${(bytes / 1024 ** 3).toFixed(2)}\nTB: ${(bytes / 1024 ** 4).toFixed(2)}`,
+        );
+      }
     }
   });
 
@@ -274,10 +332,12 @@ function ToolInterface(props: { toolId: string }) {
     setTimeout(() => setCopied(false), 2000);
   };
 
-  const regenerateUuid = () => {
-    const res = evaluator.process("uuid");
-    setOutput(res?.value || "");
-  };
+  const regenerateUuid = () => setOutput(uuidv4());
+
+  const timestampModes = [
+    { id: "epoch_to_date", label: "Epoch → Date" },
+    { id: "date_to_epoch", label: "Date → Epoch" },
+  ];
 
   return (
     <div class="flex flex-col gap-6 max-w-3xl">
@@ -328,6 +388,30 @@ function ToolInterface(props: { toolId: string }) {
         </div>
       </Show>
 
+      <Show when={props.toolId === "timestamp"}>
+        <div class="flex gap-2">
+          <For each={timestampModes}>
+            {(m) => (
+              <button
+                onClick={() => {
+                  setMode(m.id as any);
+                  setInput("");
+                  setOutput("");
+                }}
+                class={cn(
+                  "px-4 py-1.5 rounded-lg text-sm font-medium transition-colors",
+                  mode() === m.id
+                    ? "bg-[var(--color-app-accent)] text-white"
+                    : "bg-[var(--color-app-surface-secondary)] text-[var(--color-app-text-secondary)] hover:text-white",
+                )}
+              >
+                {m.label}
+              </button>
+            )}
+          </For>
+        </div>
+      </Show>
+
       {/* Input */}
       <Show when={props.toolId !== "uuid"}>
         <div class="space-y-2">
@@ -344,7 +428,9 @@ function ToolInterface(props: { toolId: string }) {
                 class="w-full bg-[var(--color-app-surface)] border border-[var(--color-app-border)] rounded-xl px-4 py-3 text-sm font-mono focus:outline-none focus:border-[var(--color-app-accent)]/50 text-[var(--color-app-text-primary)]"
                 placeholder={
                   props.toolId === "timestamp"
-                    ? "Enter epoch timestamp or leave blank for now..."
+                    ? mode() === "epoch_to_date"
+                      ? "Enter epoch (ms or s) or leave blank for now..."
+                      : "Enter date (e.g. 2024-01-15T10:00:00)..."
                     : props.toolId === "storage"
                       ? "Enter bytes..."
                       : "Type here..."

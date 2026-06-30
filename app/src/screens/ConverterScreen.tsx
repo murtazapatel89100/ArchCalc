@@ -73,7 +73,6 @@ export function ConverterScreen() {
     if (result !== null) {
       setOutputValue(result);
 
-      // Debounce saving to recent conversions
       const timer = setTimeout(() => {
         const newConv = {
           from: `${val} ${fromUnit().toUpperCase()}`,
@@ -85,10 +84,10 @@ export function ConverterScreen() {
         setRecent((prev) =>
           [newConv, ...prev.filter((c) => c.from !== newConv.from)].slice(0, 4),
         );
-      }, 1000);
+      }, 300);
       onCleanup(() => clearTimeout(timer));
     } else {
-      setOutputValue("Error");
+      setOutputValue("");
     }
   });
 
@@ -115,7 +114,7 @@ export function ConverterScreen() {
             <button
               onClick={() => handleCategoryChange(cat)}
               class={cn(
-                "flex items-center gap-2 px-4 py-2.5 rounded-lg text-sm font-medium whitespace-nowrap transition-all border",
+                "flex items-center gap-2 px-4 py-2.5 rounded-lg text-sm font-medium whitespace-nowrap transition-all border cursor-pointer",
                 cat.id === activeCategory().id
                   ? "bg-[var(--color-app-accent)]/10 border-[var(--color-app-accent)]/20 text-[var(--color-app-accent)] shadow-sm"
                   : "bg-[var(--color-app-surface)] border-[var(--color-app-border)] text-[var(--color-app-text-secondary)] hover:bg-[var(--color-app-surface-secondary)]/50 hover:text-[var(--color-app-text-primary)]",
@@ -154,8 +153,16 @@ export function ConverterScreen() {
               </select>
               <input
                 type="text"
+                inputmode="decimal"
                 value={inputValue()}
-                onInput={(e) => setInputValue(e.currentTarget.value)}
+                onInput={(e) => {
+                  const filtered = e.currentTarget.value.replace(
+                    /[^0-9.-]/g,
+                    "",
+                  );
+                  e.currentTarget.value = filtered;
+                  setInputValue(filtered);
+                }}
                 class="bg-transparent text-4xl font-mono text-[var(--color-app-text-primary)] focus:outline-none w-full border-b border-transparent focus:border-[var(--color-app-accent)]/30 transition-colors py-2"
               />
             </div>

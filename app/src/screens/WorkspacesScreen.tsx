@@ -1,4 +1,4 @@
-import { FileText, Plus, Trash, X } from "lucide-solid";
+import { FileText, HelpCircle, Plus, Trash, X } from "lucide-solid";
 import { createEffect, createSignal, For, onCleanup, Show } from "solid-js";
 import { cn } from "../utils/cn";
 import { createLocalStorage } from "../utils/createLocalStorage";
@@ -35,6 +35,7 @@ export function WorkspacesScreen() {
   const activeWorkspace = () => workspaces().find((w) => w.id === activeId());
 
   const [showModal, setShowModal] = createSignal(false);
+  const [showSyntaxHelp, setShowSyntaxHelp] = createSignal(false);
   const [newWorkspaceName, setNewWorkspaceName] = createSignal("");
   let nameInputRef!: HTMLInputElement;
 
@@ -224,15 +225,26 @@ export function WorkspacesScreen() {
                 <span class="w-2 h-2 rounded-full bg-[var(--color-app-success)]/80"></span>
                 Autosaved
               </div>
+              <button
+                onClick={() => setShowSyntaxHelp(true)}
+                class="text-[var(--color-app-text-secondary)] hover:text-[var(--color-app-accent)] transition-colors p-1 hover:bg-[var(--color-app-accent)]/10 rounded"
+                title="Syntax help"
+              >
+                <HelpCircle size={15} />
+              </button>
             </div>
           </div>
 
           <div class="flex-1 flex overflow-hidden bg-[var(--color-app-bg)]">
             {/* Editor */}
             <div class="flex-1 p-6 relative font-mono text-[14px] leading-relaxed flex">
-              <div class="w-12 bg-[var(--color-app-surface-secondary)]/20 border-r border-[var(--color-app-border)] flex flex-col items-center pt-2 text-[var(--color-app-text-secondary)]/50 text-xs font-mono select-none">
+              <div class="w-12 bg-[var(--color-app-surface-secondary)]/20 border-r border-[var(--color-app-border)] flex flex-col items-center pt-1 text-[var(--color-app-text-secondary)]/50 font-mono select-none">
                 <For each={activeWorkspace()?.content.split("\n")}>
-                  {(_, i) => <span>{i() + 1}</span>}
+                  {(_, i) => (
+                    <span class="block w-full text-center leading-relaxed">
+                      {i() + 1}
+                    </span>
+                  )}
                 </For>
               </div>
               <textarea
@@ -261,6 +273,69 @@ export function WorkspacesScreen() {
                     </div>
                   )}
                 </For>
+              </div>
+            </div>
+          </div>
+        </div>
+      </Show>
+
+      {/* Syntax Help Modal */}
+      <Show when={showSyntaxHelp()}>
+        <div class="fixed inset-0 z-50 bg-black/50 backdrop-blur-sm flex items-center justify-center p-4">
+          <div class="bg-[var(--color-app-surface)] border border-[var(--color-app-border)] rounded-xl w-full max-w-md shadow-2xl overflow-hidden">
+            <div class="flex items-center justify-between p-4 border-b border-[var(--color-app-border)]">
+              <h3 class="font-semibold text-[var(--color-app-text-primary)]">
+                Workspace Syntax
+              </h3>
+              <button
+                onClick={() => setShowSyntaxHelp(false)}
+                class="text-[var(--color-app-text-secondary)] hover:text-[var(--color-app-text-primary)] transition-colors p-1 rounded-md hover:bg-[var(--color-app-surface-secondary)]"
+              >
+                <X size={16} />
+              </button>
+            </div>
+            <div class="p-4 space-y-4 text-sm">
+              <div class="space-y-2">
+                <p class="text-xs font-semibold uppercase tracking-wider text-[var(--color-app-text-secondary)]">
+                  Math
+                </p>
+                <div class="bg-[var(--color-app-surface-secondary)] rounded-lg p-3 font-mono text-[var(--color-app-text-primary)] space-y-1 text-xs">
+                  <div>2 + 3 * 4</div>
+                  <div>sqrt(16)</div>
+                  <div>3^2</div>
+                  <div>15% of 200</div>
+                </div>
+              </div>
+              <div class="space-y-2">
+                <p class="text-xs font-semibold uppercase tracking-wider text-[var(--color-app-text-secondary)]">
+                  Variables
+                </p>
+                <div class="bg-[var(--color-app-surface-secondary)] rounded-lg p-3 font-mono text-[var(--color-app-text-primary)] space-y-1 text-xs">
+                  <div>salary = 50000</div>
+                  <div>tax = salary * 0.3</div>
+                  <div>net = salary - tax</div>
+                </div>
+                <p class="text-xs text-[var(--color-app-text-secondary)]">
+                  Variables are accumulated top-to-bottom within a workspace.
+                </p>
+              </div>
+              <div class="space-y-2">
+                <p class="text-xs font-semibold uppercase tracking-wider text-[var(--color-app-text-secondary)]">
+                  Comments
+                </p>
+                <div class="bg-[var(--color-app-surface-secondary)] rounded-lg p-3 font-mono text-[var(--color-app-text-primary)] text-xs">
+                  {/* This line is ignored */}
+                </div>
+              </div>
+              <div class="space-y-2">
+                <p class="text-xs font-semibold uppercase tracking-wider text-[var(--color-app-text-secondary)]">
+                  Tips
+                </p>
+                <ul class="text-xs text-[var(--color-app-text-secondary)] space-y-1 list-disc list-inside">
+                  <li>Results update in real-time as you type</li>
+                  <li>Variable names are case-sensitive</li>
+                  <li>Blank lines are skipped</li>
+                </ul>
               </div>
             </div>
           </div>

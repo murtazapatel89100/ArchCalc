@@ -260,7 +260,10 @@ export function SystemDashboard() {
                   <div class="space-y-2">
                     <div class="flex justify-between text-xs font-mono">
                       <span class="text-[var(--color-app-text-secondary)]">
-                        Used:{" "}
+                        {formatBytes(info().ram_used)} /{" "}
+                        {formatBytes(info().ram_total)}
+                      </span>
+                      <span class="text-[var(--color-app-accent)]">
                         {((info().ram_used / info().ram_total) * 100).toFixed(
                           0,
                         )}
@@ -291,14 +294,14 @@ export function SystemDashboard() {
                   <div class="space-y-2">
                     <div class="flex justify-between text-xs font-mono">
                       <span class="text-[var(--color-app-text-secondary)]">
-                        Used:{" "}
                         {info().swap_total > 0
-                          ? (
-                              (info().swap_used / info().swap_total) *
-                              100
-                            ).toFixed(0)
-                          : 0}
-                        %
+                          ? `${formatBytes(info().swap_used)} / ${formatBytes(info().swap_total)}`
+                          : "No swap"}
+                      </span>
+                      <span class="text-[var(--color-app-success)]">
+                        {info().swap_total > 0
+                          ? `${((info().swap_used / info().swap_total) * 100).toFixed(0)}%`
+                          : ""}
                       </span>
                     </div>
                     <div class="w-full bg-[var(--color-app-surface-secondary)] rounded-full h-2">

@@ -1,7 +1,14 @@
 import { invoke } from "@tauri-apps/api/core";
 import { Base64 } from "js-base64";
-import { sha1, sha256, sha512 } from "js-sha256";
+import { sha256 } from "js-sha256";
 import { v4 as uuidv4 } from "uuid";
+
+const subtleHash = (algo: string, text: string): Promise<string> =>
+  crypto.subtle.digest(algo, new TextEncoder().encode(text)).then((buf) =>
+    Array.from(new Uint8Array(buf))
+      .map((b) => b.toString(16).padStart(2, "0"))
+      .join(""),
+  );
 
 export interface EvalResult {
   value: string;
@@ -27,11 +34,11 @@ export const evaluator = {
     }
     if (lower.startsWith("sha1 ")) {
       const text = query.substring(5);
-      return { value: sha1(text), type: "dev" };
+      return { value: await subtleHash("SHA-1", text), type: "dev" };
     }
     if (lower.startsWith("sha512 ")) {
       const text = query.substring(7);
-      return { value: sha512(text), type: "dev" };
+      return { value: await subtleHash("SHA-512", text), type: "dev" };
     }
 
     // 3. Base64
@@ -165,6 +172,9 @@ export const evaluator = {
     }
 
     // Temperature (needs custom formula)
+    const tempLabels: Record<string, string> = { c: "°C", f: "°F", k: "K" };
+    if (tempLabels[from] && from === to)
+      return `${value.toFixed(2)} ${tempLabels[from]}`;
     if (from === "c" && to === "f")
       return `${((value * 9) / 5 + 32).toFixed(2)} °F`;
     if (from === "f" && to === "c")
