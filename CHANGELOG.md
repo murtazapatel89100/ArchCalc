@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.1.0](https://github.com/murtazapatel89100/ArchCalc/compare/archcalc-v1.0.1...archcalc-v1.1.0) (2026-06-30)
+
+
+### Features
+
+* add custom window title bar ([95979f6](https://github.com/murtazapatel89100/ArchCalc/commit/95979f6193fd28e04dde4251ae9f80373ea23bde))
+
 ## [1.0.1](https://github.com/murtazapatel89100/ArchCalc/compare/archcalc-v1.0.0...archcalc-v1.0.1) (2026-06-30)
 
 
