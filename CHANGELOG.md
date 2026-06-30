@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.1.1](https://github.com/murtazapatel89100/ArchCalc/compare/archcalc-v1.1.0...archcalc-v1.1.1) (2026-06-30)
+
+
+### Bug Fixes
+
+* **ci:** remove app/pnpm-workspace.yaml breaking pnpm install ([dce1a3e](https://github.com/murtazapatel89100/ArchCalc/commit/dce1a3ec7e165d14c795499a4bb4818d398958c9))
+
 ## [1.1.0](https://github.com/murtazapatel89100/ArchCalc/compare/archcalc-v1.0.1...archcalc-v1.1.0) (2026-06-30)
 
 
