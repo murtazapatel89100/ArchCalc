@@ -1,5 +1,8 @@
 @import "tailwindcss";
-@plugin "@tailwindcss/typography";
+@import "fumadocs-ui/css/neutral.css";
+@import "fumadocs-ui/css/preset.css";
+
+@source "../../node_modules/fumadocs-ui/dist/**/*.js";
 
 @theme inline {
   --color-background: var(--background);

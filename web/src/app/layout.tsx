@@ -2,8 +2,7 @@ import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
 import { Analytics } from "@vercel/analytics/next";
-import { Footer } from "@/components/Footer";
-import { Navbar } from "@/components/Navbar";
+import { RootProvider } from "fumadocs-ui/provider/next";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -63,12 +62,14 @@ export default function RootLayout({
   return (
     <html
       lang="en"
-      className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
+      // ArchCalc is dark-only. Hardcoding `dark` ensures Fumadocs' class-based
+      // color palette is correct at SSR (no flash), while `suppressHydrationWarning`
+      // silences the expected next-themes `color-scheme`/class injection mismatch.
+      className={`${geistSans.variable} ${geistMono.variable} dark h-full antialiased`}
+      suppressHydrationWarning
     >
       <body className="min-h-full flex flex-col selection:bg-blue-500/30 selection:text-blue-200">
-        <Navbar />
-        <main className="flex-1 flex flex-col">{children}</main>
-        <Footer />
+        <RootProvider theme={{ forcedTheme: "dark" }}>{children}</RootProvider>
         <Analytics />
       </body>
     </html>

@@ -8,6 +8,11 @@ export const siteConfig = {
     privacy: "/privacy",
     terms: "/terms",
   },
+  // GitHub does not expose AUR download counts, so this is a manually
+  // maintained estimate that gets added to the GitHub asset download total.
+  stats: {
+    aurDownloads: 1000,
+  },
   nav: [
     {
       name: "Documentation",

@@ -8,9 +8,7 @@ export default function sitemap(): MetadataRoute.Sitemap {
     "",
     "/docs",
     "/docs/getting-started",
-    "/docs/dev-tools",
-    "/docs/system-reading",
-    "/docs/workspace",
+    "/docs/architecture",
   ].map((route) => ({
     url: `${baseUrl}${route}`,
     lastModified: new Date(),

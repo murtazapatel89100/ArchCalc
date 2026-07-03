@@ -1,16 +1,12 @@
-import { Sidebar } from "@/components/Sidebar";
+import { DocsLayout } from "fumadocs-ui/layouts/docs";
+import type { ReactNode } from "react";
+import { baseOptions } from "@/lib/layout.shared";
+import { source } from "@/lib/source";
 
-export default function DocsLayout({
-  children,
-}: {
-  children: React.ReactNode;
-}) {
+export default function Layout({ children }: { children: ReactNode }) {
   return (
-    <div className="flex flex-1 w-full max-w-7xl mx-auto">
-      <Sidebar />
-      <div className="flex-1 min-w-0 p-6 md:p-10 pb-24 lg:pb-32 overflow-y-auto prose prose-invert prose-blue max-w-none prose-pre:bg-zinc-900 prose-pre:border-zinc-800">
-        {children}
-      </div>
-    </div>
+    <DocsLayout tree={source.pageTree} {...baseOptions()}>
+      {children}
+    </DocsLayout>
   );
 }

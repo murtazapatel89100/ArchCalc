@@ -1,6 +1,7 @@
 import { ArrowRight, Cpu, Download, Hash, Terminal } from "lucide-react";
 import Link from "next/link";
 import DownloadSection from "@/components/DownloadSection";
+import { siteConfig } from "@/config/site";
 
 async function getLatestRelease() {
   try {
@@ -42,7 +43,9 @@ async function getTotalDownloads() {
 
 export default async function Home() {
   const latestVersion = await getLatestRelease();
-  const totalDownloads = await getTotalDownloads();
+  const githubDownloads = await getTotalDownloads();
+  // AUR downloads aren't reported by any API, so we fold in a manual estimate.
+  const totalDownloads = githubDownloads + siteConfig.stats.aurDownloads;
 
   return (
     <div className="flex flex-col flex-1 relative overflow-hidden">

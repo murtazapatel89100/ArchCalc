@@ -1,4 +1,7 @@
-# Architecture Overview
+---
+title: Architecture
+description: How ArchCalc separates a high-performance Rust backend from a reactive SolidJS frontend.
+---
 
 ArchCalc follows a clean separation of concerns, dividing responsibilities between a high-performance Rust backend and a reactive SolidJS frontend, connected via Tauri's IPC bridge.
 
@@ -13,11 +16,13 @@ Backend (Rust)
 ```
 
 ### Backend (Rust)
+
 - **Business Logic & Math Engine**: Evaluates expressions using a custom tokenizer, parser, and AST evaluator.
 - **File Storage**: Handles reading and writing user history securely to the local filesystem.
 - **System APIs**: Uses native desktop features where necessary via Tauri APIs.
 
 ### Frontend (SolidJS)
+
 - **UI & Interactions**: Delivers a fast, reactive user interface for typing equations and viewing results.
 - **State Management**: Maintains the application state efficiently.
 - **IPC Communication**: Calls Rust functions asynchronously without blocking the UI thread.

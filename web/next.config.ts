@@ -1,12 +1,11 @@
-import nextMDX from "@next/mdx";
+import { createMDX } from "fumadocs-mdx/next";
 import type { NextConfig } from "next";
 
-const withMDX = nextMDX();
+const withMDX = createMDX();
 
 const nextConfig: NextConfig = {
   /* config options here */
   reactCompiler: true,
-  pageExtensions: ["js", "jsx", "md", "mdx", "ts", "tsx"],
   images: {
     remotePatterns: [
       {
