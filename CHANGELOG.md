@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.2.0](https://github.com/murtazapatel89100/ArchCalc/compare/archcalc-v1.1.1...archcalc-v1.2.0) (2026-07-09)
+
+
+### Features
+
+* add scientific calculator UI and documentation ([515a27a](https://github.com/murtazapatel89100/ArchCalc/commit/515a27ad0d46732738fba555736992f0921a6139))
+
 ## [1.1.1](https://github.com/murtazapatel89100/ArchCalc/compare/archcalc-v1.1.0...archcalc-v1.1.1) (2026-06-30)
 
 
