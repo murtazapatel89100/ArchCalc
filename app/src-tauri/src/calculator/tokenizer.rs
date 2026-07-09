@@ -75,7 +75,11 @@ pub fn tokenize(input: &str) -> Result<Vec<Token>, CalculatorError> {
                         break;
                     }
                 }
-                tokens.push(Token::Function(func_str.to_lowercase()));
+                match func_str.to_lowercase().as_str() {
+                    "pi" => tokens.push(Token::Number(std::f64::consts::PI)),
+                    "e" => tokens.push(Token::Number(std::f64::consts::E)),
+                    s => tokens.push(Token::Function(s.to_string())),
+                }
             }
             _ => {
                 return Err(CalculatorError::ParseError(format!(

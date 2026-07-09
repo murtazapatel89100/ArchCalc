@@ -42,6 +42,30 @@ pub fn evaluate_expr(expr: &Expr) -> Result<f64, CalculatorError> {
                 "ln" => Ok(val.ln()),
                 "abs" => Ok(val.abs()),
                 "exp" => Ok(val.exp()),
+                "ceil" => Ok(val.ceil()),
+                "floor" => Ok(val.floor()),
+                "round" => Ok(val.round()),
+                "sind" => Ok(val.to_radians().sin()),
+                "cosd" => Ok(val.to_radians().cos()),
+                "tand" => Ok(val.to_radians().tan()),
+                "asind" => Ok(val.asin().to_degrees()),
+                "acosd" => Ok(val.acos().to_degrees()),
+                "atand" => Ok(val.atan().to_degrees()),
+                "factorial" => {
+                    if val < 0.0 || val.fract() != 0.0 {
+                        Err(CalculatorError::MathError(
+                            "Factorial requires a non-negative integer".to_string(),
+                        ))
+                    } else {
+                        let n = val as u64;
+                        if n > 20 {
+                            return Err(CalculatorError::MathError(
+                                "Factorial input too large".to_string(),
+                            ));
+                        }
+                        Ok((1..=n).product::<u64>() as f64)
+                    }
+                }
                 _ => Err(CalculatorError::ParseError(format!(
                     "Unknown function: {}",
                     name
