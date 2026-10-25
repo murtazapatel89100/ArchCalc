@@ -13,7 +13,7 @@ impl SystemState {
         let mut sys = System::new_all();
         sys.refresh_cpu_usage(); // Need to call it once to prime the CPU usage
         let mut networks = Networks::new_with_refreshed_list();
-        networks.refresh();
+        networks.refresh(true);
 
         Self {
             sys: Mutex::new(sys),
@@ -50,9 +50,9 @@ pub fn get_system_info(state: State<'_, SystemState>) -> SystemInfo {
 
     sys.refresh_cpu_usage();
     sys.refresh_memory();
-    networks.refresh();
+    networks.refresh(true);
 
-    let cpu_usage = sys.global_cpu_info().cpu_usage();
+    let cpu_usage = sys.global_cpu_usage();
     let cpu_cores = sys.cpus().len();
 
     let ram_used = sys.used_memory();
