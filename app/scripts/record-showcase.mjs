@@ -388,10 +388,22 @@ async function tour(page, marks) {
     await click(page.getByRole("button", { name: "Create" }), 900);
 
     const field = (label) => page.locator("label", { hasText: label }).locator("input").first();
-    await click(field("Filament used per plate"));
+    await click(page.getByLabel("Filament 1 Used per plate"));
     await page.keyboard.press("Control+A");
-    await type("96");
-    await wait(700);
+    await type("72");
+    await wait(500);
+    await click(page.getByRole("button", { name: "Add filament" }), 500);
+    await click(page.getByLabel("Filament name").last());
+    await page.keyboard.press("Control+A");
+    await type("Silk Gold");
+    await click(page.getByLabel("Filament 2 Spool price"));
+    await page.keyboard.press("Control+A");
+    await type("1600");
+    await click(page.getByLabel("Filament 2 Used per plate"));
+    await page.keyboard.press("Control+A");
+    await type("24");
+    await wait(900);
+    await shot("quote-filaments");
     await click(field("Items per plate"));
     await page.keyboard.press("Control+A");
     await type("6");
@@ -431,10 +443,12 @@ async function tour(page, marks) {
     await click(page.getByLabel("Quote name"));
     await page.keyboard.press("Control+A");
     await type("PETG");
-    await click(field("Spool price"));
+    await click(page.getByLabel("Filament 1 Spool price"));
     await page.keyboard.press("Control+A");
     await type("1650");
     await wait(900);
+    await click(page.getByRole("button", { name: "Dragon keychain" }), 1600);
+    await shot("quote-list");
     await click(page.getByRole("button", { name: "Compare" }), 2200);
     await shot("quote-compare");
     await click(page.getByRole("button", { name: "PLA Basic" }).first(), 700);
@@ -465,6 +479,8 @@ async function tour(page, marks) {
     await wait(1600);
     await click(page.getByRole("button", { name: "Document" }), 600);
     await click(page.getByText("×", { exact: true }), 600);
+    await click(page.getByRole("button", { name: "All products" }), 1600);
+    await shot("quote-products");
   });
 
   await section("settings", async () => {
