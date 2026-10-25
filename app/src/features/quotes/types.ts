@@ -22,8 +22,17 @@ export interface OverheadLine {
   value: number;
 }
 
+/** One row of a builder's repeatable group, e.g. one filament spool. */
+export interface GroupRow {
+  id: string;
+  name: string;
+  values: Record<string, number>;
+}
+
 export interface QuoteInputs {
   fields: Record<string, number>;
+  /** Rows per builder group key. Optional: quotes saved before groups existed don't have it. */
+  groups?: Record<string, GroupRow[]>;
   materials: MaterialLine[];
   overheads: OverheadLine[];
   profit: { mode: ProfitMode; value: number };

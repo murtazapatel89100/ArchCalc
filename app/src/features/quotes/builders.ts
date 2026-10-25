@@ -26,6 +26,50 @@ export interface FieldDef {
 
 type Fields = Record<string, number>;
 
+export interface GroupRowInit {
+  name: string;
+  values: Fields;
+}
+
+/**
+ * A repeatable list of rows that make up the base cost, e.g. several filament spools or fabrics.
+ * Each row has a name and its own fields, and contributes `rowCost` per unit.
+ */
+export interface GroupDef {
+  key: string;
+  /** Section title, e.g. "Filaments". */
+  title: string;
+  /** One row, e.g. "Filament" (used for "Add filament" and cost-line labels). */
+  itemLabel: string;
+  hint?: string;
+  fields: FieldDef[];
+  defaults: GroupRowInit[];
+  /** Cost of one row per unit; `f` holds the builder's single-value fields. */
+  rowCost: (row: Fields, f: Fields) => number;
+  /** The same as a spreadsheet formula: `c(key)` is this row's cell, `r(key)` a single-value field. */
+  rowFormula: (
+    c: (key: string) => string,
+    r: (key: string) => string,
+  ) => string;
+}
+
+export interface MigratedInputs {
+  fields?: Fields;
+  groups: Record<string, GroupRowInit[]>;
+}
+
+/** Helpers a builder's extra cost lines can use to refer to its groups. */
+export interface GroupTotals {
+  /** Total `rowCost` of a group, per unit. */
+  cost: (group: string) => number;
+  /** Sum of one field across a group's rows. */
+  sum: (group: string, field: string) => number;
+}
+export interface GroupRefs {
+  cost: (group: string) => string;
+  sum: (group: string, field: string) => string;
+}
+
 export interface QuoteBuilder {
   id: string;
   name: string;
@@ -35,16 +79,26 @@ export interface QuoteBuilder {
   unitLabel: string;
   /** Starting order quantity for new quotes (defaults to 1). */
   defaultQuantity?: number;
+  /** Single-value inputs. */
   fields: FieldDef[];
-  baseCost: (f: Fields) => CostLine[];
+  /** Repeatable rows (spools, fabrics, surfaces…). Their row costs are added to the base cost. */
+  groups?: GroupDef[];
+  /** Base-cost lines other than group rows (e.g. electricity, labour). */
+  baseCost: (f: Fields, g: GroupTotals) => CostLine[];
   /**
-   * The same base cost as spreadsheet formulas, one per `baseCost` line and in the same order,
-   * so exported sheets stay live. `r(key)` is the cell holding a field; `line(i)` an earlier line.
+   * The same lines as spreadsheet formulas, one per `baseCost` line and in the same order, so
+   * exported sheets stay live. `r(key)` is a field's cell; `line(i)` an earlier extra line.
    */
   baseFormulas: (
     r: (key: string) => string,
     line: (i: number) => string,
+    g: GroupRefs,
   ) => string[];
+  /**
+   * Convert inputs saved before this builder had groups (single-value fields only) into
+   * group rows plus any new single-value fields.
+   */
+  migrate?: (legacy: Fields) => MigratedInputs | undefined;
   /** Field whose value spreads per-batch materials across units (e.g. pieces per batch). */
   materialsDivisorField?: string;
   materialsHint: string;
@@ -56,36 +110,62 @@ export interface QuoteBuilder {
 }
 
 const f = (fields: Fields, key: string) => num(fields[key]);
+// Saved inputs are plain JSON objects, so `in` is a safe own-property check here.
+const has = (fields: Fields, key: string) =>
+  key in fields && Number.isFinite(fields[key]);
 
 export const builders: QuoteBuilder[] = [
   {
     id: "print3d",
     name: "3D Print Costing",
-    desc: "Filament per plate, items per plate, machine time",
+    desc: "Multiple filaments per plate, items per plate, machine time",
     icon: Box,
     unitLabel: "item",
+    groups: [
+      {
+        key: "filaments",
+        title: "Filaments",
+        itemLabel: "Filament",
+        hint: "One row per spool used on the plate — e.g. each colour of a multi-colour print. Grams come from your slicer.",
+        fields: [
+          {
+            key: "spoolPrice",
+            label: "Spool price",
+            kind: "currency",
+            default: 1200,
+          },
+          {
+            key: "spoolWeight",
+            label: "Spool weight",
+            kind: "number",
+            suffix: "g",
+            default: 1000,
+          },
+          {
+            key: "grams",
+            label: "Used per plate",
+            kind: "number",
+            suffix: "g",
+            default: 80,
+          },
+        ],
+        defaults: [
+          {
+            name: "PLA Basic — Black",
+            values: { spoolPrice: 1200, spoolWeight: 1000, grams: 80 },
+          },
+        ],
+        rowCost: (row, x) =>
+          safeDiv(
+            f(row, "grams") *
+              safeDiv(f(row, "spoolPrice"), f(row, "spoolWeight")),
+            f(x, "itemsPerPlate"),
+          ),
+        rowFormula: (c, r) =>
+          `IFERROR(${c("grams")}*${c("spoolPrice")}/${c("spoolWeight")}/${r("itemsPerPlate")},0)`,
+      },
+    ],
     fields: [
-      {
-        key: "spoolPrice",
-        label: "Spool price",
-        kind: "currency",
-        default: 1200,
-      },
-      {
-        key: "spoolWeight",
-        label: "Spool weight",
-        kind: "number",
-        suffix: "g",
-        default: 1000,
-      },
-      {
-        key: "plateGrams",
-        label: "Filament used per plate",
-        kind: "number",
-        suffix: "g",
-        default: 80,
-        hint: "Total grams for the whole plate, from your slicer.",
-      },
       {
         key: "itemsPerPlate",
         label: "Items per plate",
@@ -121,29 +201,41 @@ export const builders: QuoteBuilder[] = [
         hint: "Extra filament & power to cover failed prints.",
       },
     ],
-    baseCost: (x) => {
-      const items = f(x, "itemsPerPlate");
-      const perGram = safeDiv(f(x, "spoolPrice"), f(x, "spoolWeight"));
-      const filament = safeDiv(f(x, "plateGrams") * perGram, items);
+    baseCost: (x, g) => {
       const power = safeDiv(
         ((f(x, "printHours") * f(x, "printerWatts")) / 1000) *
           f(x, "electricityRate"),
-        items,
+        f(x, "itemsPerPlate"),
       );
       return [
-        { label: "Filament", amount: filament },
         { label: "Printer electricity", amount: power },
         {
           label: "Failure allowance",
-          amount: ((filament + power) * f(x, "failureRate")) / 100,
+          amount: ((g.cost("filaments") + power) * f(x, "failureRate")) / 100,
         },
       ];
     },
-    baseFormulas: (r, line) => [
-      `IFERROR(${r("plateGrams")}*${r("spoolPrice")}/${r("spoolWeight")}/${r("itemsPerPlate")},0)`,
+    baseFormulas: (r, line, g) => [
       `IFERROR(${r("printHours")}*${r("printerWatts")}/1000*${r("electricityRate")}/${r("itemsPerPlate")},0)`,
-      `(${line(0)}+${line(1)})*${r("failureRate")}/100`,
+      `(${g.cost("filaments")}+${line(0)})*${r("failureRate")}/100`,
     ],
+    migrate: (old) =>
+      has(old, "spoolPrice") || has(old, "plateGrams")
+        ? {
+            groups: {
+              filaments: [
+                {
+                  name: "Filament",
+                  values: {
+                    spoolPrice: f(old, "spoolPrice"),
+                    spoolWeight: f(old, "spoolWeight"),
+                    grams: f(old, "plateGrams"),
+                  },
+                },
+              ],
+            },
+          }
+        : undefined,
     materialsHint: "Add-ons per item, e.g. keyring, magnet, insert nut.",
     defaults: {
       materials: [{ name: "Keyring", unitCost: 4, qty: 1 }],
@@ -157,23 +249,39 @@ export const builders: QuoteBuilder[] = [
   {
     id: "freelance",
     name: "Freelance / Services",
-    desc: "Hourly rate, estimated hours, revisions",
+    desc: "Work items at their own rates, revisions",
     icon: Laptop,
     unitLabel: "project",
+    groups: [
+      {
+        key: "work",
+        title: "Work items",
+        itemLabel: "Task",
+        hint: "Break the project into tasks, each with its own hours and rate.",
+        fields: [
+          {
+            key: "hours",
+            label: "Hours",
+            kind: "number",
+            suffix: "hrs",
+            default: 10,
+          },
+          {
+            key: "rate",
+            label: "Hourly rate",
+            kind: "currency",
+            default: 800,
+          },
+        ],
+        defaults: [
+          { name: "Design", values: { hours: 8, rate: 800 } },
+          { name: "Development", values: { hours: 12, rate: 800 } },
+        ],
+        rowCost: (row) => f(row, "hours") * f(row, "rate"),
+        rowFormula: (c) => `${c("hours")}*${c("rate")}`,
+      },
+    ],
     fields: [
-      {
-        key: "hourlyRate",
-        label: "Hourly rate",
-        kind: "currency",
-        default: 800,
-      },
-      {
-        key: "hours",
-        label: "Estimated hours",
-        kind: "number",
-        suffix: "hrs",
-        default: 20,
-      },
       {
         key: "revisions",
         label: "Revision rounds",
@@ -187,19 +295,40 @@ export const builders: QuoteBuilder[] = [
         suffix: "hrs",
         default: 2,
       },
+      {
+        key: "revisionRate",
+        label: "Revision hourly rate",
+        kind: "currency",
+        default: 800,
+      },
     ],
     baseCost: (x) => [
-      { label: "Work hours", amount: f(x, "hourlyRate") * f(x, "hours") },
       {
         label: "Revisions",
         amount:
-          f(x, "hourlyRate") * f(x, "revisions") * f(x, "hoursPerRevision"),
+          f(x, "revisions") * f(x, "hoursPerRevision") * f(x, "revisionRate"),
       },
     ],
     baseFormulas: (r) => [
-      `${r("hourlyRate")}*${r("hours")}`,
-      `${r("hourlyRate")}*${r("revisions")}*${r("hoursPerRevision")}`,
+      `${r("revisions")}*${r("hoursPerRevision")}*${r("revisionRate")}`,
     ],
+    migrate: (old) =>
+      has(old, "hourlyRate")
+        ? {
+            fields: { revisionRate: f(old, "hourlyRate") },
+            groups: {
+              work: [
+                {
+                  name: "Work",
+                  values: {
+                    hours: f(old, "hours"),
+                    rate: f(old, "hourlyRate"),
+                  },
+                },
+              ],
+            },
+          }
+        : undefined,
     materialsHint: "Software licences, stock assets, travel…",
     defaults: {
       materials: [],
@@ -264,23 +393,36 @@ export const builders: QuoteBuilder[] = [
   {
     id: "tailoring",
     name: "Tailoring & Stitching",
-    desc: "Fabric metres, lining, stitching labour",
+    desc: "Multiple fabrics, lining, stitching labour",
     icon: Scissors,
     unitLabel: "garment",
+    groups: [
+      {
+        key: "fabrics",
+        title: "Fabrics",
+        itemLabel: "Fabric",
+        hint: "Add each fabric the garment uses — main, contrast, trims.",
+        fields: [
+          {
+            key: "metres",
+            label: "Metres",
+            kind: "number",
+            suffix: "m",
+            default: 1,
+          },
+          {
+            key: "rate",
+            label: "Price per metre",
+            kind: "currency",
+            default: 250,
+          },
+        ],
+        defaults: [{ name: "Main fabric", values: { metres: 2.5, rate: 250 } }],
+        rowCost: (row) => f(row, "metres") * f(row, "rate"),
+        rowFormula: (c) => `${c("metres")}*${c("rate")}`,
+      },
+    ],
     fields: [
-      {
-        key: "fabricMetres",
-        label: "Fabric required",
-        kind: "number",
-        suffix: "m",
-        default: 2.5,
-      },
-      {
-        key: "fabricRate",
-        label: "Fabric price per metre",
-        kind: "currency",
-        default: 250,
-      },
       { key: "liningCost", label: "Lining", kind: "currency", default: 120 },
       {
         key: "stitching",
@@ -290,15 +432,26 @@ export const builders: QuoteBuilder[] = [
       },
     ],
     baseCost: (x) => [
-      { label: "Fabric", amount: f(x, "fabricMetres") * f(x, "fabricRate") },
       { label: "Lining", amount: f(x, "liningCost") },
       { label: "Stitching", amount: f(x, "stitching") },
     ],
-    baseFormulas: (r) => [
-      `${r("fabricMetres")}*${r("fabricRate")}`,
-      r("liningCost"),
-      r("stitching"),
-    ],
+    baseFormulas: (r) => [r("liningCost"), r("stitching")],
+    migrate: (old) =>
+      has(old, "fabricMetres") || has(old, "fabricRate")
+        ? {
+            groups: {
+              fabrics: [
+                {
+                  name: "Fabric",
+                  values: {
+                    metres: f(old, "fabricMetres"),
+                    rate: f(old, "fabricRate"),
+                  },
+                },
+              ],
+            },
+          }
+        : undefined,
     materialsHint: "Buttons, zips, thread, embroidery…",
     defaults: {
       materials: [
@@ -312,28 +465,44 @@ export const builders: QuoteBuilder[] = [
   {
     id: "crafts",
     name: "Handmade Crafts",
-    desc: "Candles, resin, soap — material by weight",
+    desc: "Candles, resin, soap — blend of materials by weight",
     icon: Flame,
     unitLabel: "piece",
+    groups: [
+      {
+        key: "materials",
+        title: "Base materials",
+        itemLabel: "Material",
+        hint: "Each wax, resin or oil in the blend, by weight per piece.",
+        fields: [
+          {
+            key: "grams",
+            label: "Per piece",
+            kind: "number",
+            suffix: "g",
+            default: 100,
+          },
+          {
+            key: "pricePerKg",
+            label: "Price per kg",
+            kind: "currency",
+            default: 400,
+          },
+        ],
+        defaults: [
+          { name: "Soy wax", values: { grams: 150, pricePerKg: 400 } },
+        ],
+        rowCost: (row) => (f(row, "grams") / 1000) * f(row, "pricePerKg"),
+        rowFormula: (c) => `${c("grams")}/1000*${c("pricePerKg")}`,
+      },
+    ],
     fields: [
-      {
-        key: "grams",
-        label: "Base material per piece",
-        kind: "number",
-        suffix: "g",
-        default: 150,
-      },
-      {
-        key: "pricePerKg",
-        label: "Base material price per kg",
-        kind: "currency",
-        default: 400,
-      },
       {
         key: "additivePercent",
         label: "Fragrance / colour load",
         kind: "percent",
         default: 8,
+        hint: "As a share of the total base-material weight.",
       },
       {
         key: "additivePerKg",
@@ -342,21 +511,34 @@ export const builders: QuoteBuilder[] = [
         default: 2500,
       },
     ],
-    baseCost: (x) => {
-      const kg = f(x, "grams") / 1000;
-      return [
-        { label: "Base material", amount: kg * f(x, "pricePerKg") },
-        {
-          label: "Fragrance / colour",
-          amount:
-            ((kg * f(x, "additivePercent")) / 100) * f(x, "additivePerKg"),
-        },
-      ];
-    },
-    baseFormulas: (r) => [
-      `${r("grams")}/1000*${r("pricePerKg")}`,
-      `${r("grams")}/1000*${r("additivePercent")}/100*${r("additivePerKg")}`,
+    baseCost: (x, g) => [
+      {
+        label: "Fragrance / colour",
+        amount:
+          (((g.sum("materials", "grams") / 1000) * f(x, "additivePercent")) /
+            100) *
+          f(x, "additivePerKg"),
+      },
     ],
+    baseFormulas: (r, _line, g) => [
+      `${g.sum("materials", "grams")}/1000*${r("additivePercent")}/100*${r("additivePerKg")}`,
+    ],
+    migrate: (old) =>
+      has(old, "grams") || has(old, "pricePerKg")
+        ? {
+            groups: {
+              materials: [
+                {
+                  name: "Base material",
+                  values: {
+                    grams: f(old, "grams"),
+                    pricePerKg: f(old, "pricePerKg"),
+                  },
+                },
+              ],
+            },
+          }
+        : undefined,
     materialsHint: "Jar, wick, mould wear, label…",
     defaults: {
       materials: [
@@ -371,17 +553,34 @@ export const builders: QuoteBuilder[] = [
   {
     id: "catering",
     name: "Events & Catering",
-    desc: "Cost per plate × guests, setup charges",
+    desc: "Menu cost per plate × guests, setup charges",
     icon: UtensilsCrossed,
     unitLabel: "plate",
     defaultQuantity: 100,
-    fields: [
+    groups: [
       {
-        key: "foodPerPlate",
-        label: "Food cost per plate",
-        kind: "currency",
-        default: 220,
+        key: "menu",
+        title: "Menu (per plate)",
+        itemLabel: "Dish",
+        hint: "Each course or dish and what it costs per plate.",
+        fields: [
+          {
+            key: "cost",
+            label: "Cost per plate",
+            kind: "currency",
+            default: 50,
+          },
+        ],
+        defaults: [
+          { name: "Starters", values: { cost: 50 } },
+          { name: "Main course", values: { cost: 140 } },
+          { name: "Dessert", values: { cost: 30 } },
+        ],
+        rowCost: (row) => f(row, "cost"),
+        rowFormula: (c) => c("cost"),
       },
+    ],
+    fields: [
       {
         key: "disposablesPerPlate",
         label: "Plates & cutlery",
@@ -396,15 +595,20 @@ export const builders: QuoteBuilder[] = [
       },
     ],
     baseCost: (x) => [
-      { label: "Food", amount: f(x, "foodPerPlate") },
       { label: "Disposables", amount: f(x, "disposablesPerPlate") },
       { label: "Serving staff", amount: f(x, "staffPerPlate") },
     ],
-    baseFormulas: (r) => [
-      r("foodPerPlate"),
-      r("disposablesPerPlate"),
-      r("staffPerPlate"),
-    ],
+    baseFormulas: (r) => [r("disposablesPerPlate"), r("staffPerPlate")],
+    migrate: (old) =>
+      has(old, "foodPerPlate")
+        ? {
+            groups: {
+              menu: [
+                { name: "Food", values: { cost: f(old, "foodPerPlate") } },
+              ],
+            },
+          }
+        : undefined,
     materialsHint: "Extras per plate, e.g. welcome drink, dessert.",
     defaults: {
       materials: [],
@@ -485,31 +689,56 @@ export const builders: QuoteBuilder[] = [
   {
     id: "painting",
     name: "Home Painting & Repair",
-    desc: "Area × coats, paint, labour days",
+    desc: "Surfaces × coats, paint per surface, labour days",
     icon: PaintRoller,
     unitLabel: "job",
+    groups: [
+      {
+        key: "surfaces",
+        title: "Surfaces",
+        itemLabel: "Surface",
+        hint: "Walls, ceilings, doors… each with its own paint and number of coats.",
+        fields: [
+          {
+            key: "area",
+            label: "Area",
+            kind: "number",
+            suffix: "sq ft",
+            default: 200,
+          },
+          { key: "coats", label: "Coats", kind: "number", default: 2 },
+          {
+            key: "coverage",
+            label: "Coverage / litre / coat",
+            kind: "number",
+            suffix: "sq ft",
+            default: 100,
+          },
+          {
+            key: "paintPerLitre",
+            label: "Paint per litre",
+            kind: "currency",
+            default: 350,
+          },
+        ],
+        defaults: [
+          {
+            name: "Walls",
+            values: { area: 1000, coats: 2, coverage: 100, paintPerLitre: 350 },
+          },
+          {
+            name: "Ceiling",
+            values: { area: 200, coats: 2, coverage: 110, paintPerLitre: 280 },
+          },
+        ],
+        rowCost: (row) =>
+          safeDiv(f(row, "area") * f(row, "coats"), f(row, "coverage")) *
+          f(row, "paintPerLitre"),
+        rowFormula: (c) =>
+          `IFERROR(${c("area")}*${c("coats")}/${c("coverage")},0)*${c("paintPerLitre")}`,
+      },
+    ],
     fields: [
-      {
-        key: "area",
-        label: "Area to paint",
-        kind: "number",
-        suffix: "sq ft",
-        default: 1200,
-      },
-      { key: "coats", label: "Coats", kind: "number", default: 2 },
-      {
-        key: "coverage",
-        label: "Coverage per litre per coat",
-        kind: "number",
-        suffix: "sq ft",
-        default: 100,
-      },
-      {
-        key: "paintPerLitre",
-        label: "Paint price per litre",
-        kind: "currency",
-        default: 350,
-      },
       {
         key: "labourDays",
         label: "Labour days",
@@ -525,18 +754,27 @@ export const builders: QuoteBuilder[] = [
       },
     ],
     baseCost: (x) => [
-      {
-        label: "Paint",
-        amount:
-          safeDiv(f(x, "area") * f(x, "coats"), f(x, "coverage")) *
-          f(x, "paintPerLitre"),
-      },
       { label: "Labour", amount: f(x, "labourDays") * f(x, "dayRate") },
     ],
-    baseFormulas: (r) => [
-      `IFERROR(${r("area")}*${r("coats")}/${r("coverage")},0)*${r("paintPerLitre")}`,
-      `${r("labourDays")}*${r("dayRate")}`,
-    ],
+    baseFormulas: (r) => [`${r("labourDays")}*${r("dayRate")}`],
+    migrate: (old) =>
+      has(old, "area")
+        ? {
+            groups: {
+              surfaces: [
+                {
+                  name: "Paint",
+                  values: {
+                    area: f(old, "area"),
+                    coats: f(old, "coats"),
+                    coverage: f(old, "coverage"),
+                    paintPerLitre: f(old, "paintPerLitre"),
+                  },
+                },
+              ],
+            },
+          }
+        : undefined,
     materialsHint: "Primer, putty, tape, sandpaper…",
     defaults: {
       materials: [

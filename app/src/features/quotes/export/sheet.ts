@@ -1,5 +1,7 @@
-import type { QuoteBuilder } from "../builders";
+import type { FieldKind, QuoteBuilder } from "../builders";
+import { num } from "../engine";
 import { currencySymbol } from "../format";
+import { groupRows, groupTotals, rowCost } from "../groups";
 import type { Product, Quote, QuoteResult, QuoteSettings } from "../types";
 import type { ExportDoc } from "./document";
 import { markdownToLines } from "./markdown-plain";
@@ -31,7 +33,7 @@ export type RowKind =
 
 export interface SheetRow {
   kind: RowKind;
-  /** Columns A–D. */
+  /** Columns A–F. */
   cells: (SheetCell | null)[];
 }
 
@@ -42,12 +44,17 @@ export interface SheetModel {
   currencySymbol: string;
 }
 
-const COLS = ["A", "B", "C", "D"] as const;
+const COLS = ["A", "B", "C", "D", "E", "F"] as const;
+/** Amounts always go in the last column. */
+const AMT = "F";
 const text = (value: string, extra: Partial<SheetCell> = {}): SheetCell => ({
   value,
   format: "text",
   ...extra,
 });
+
+const fieldFormat = (kind: FieldKind): CellFormat =>
+  kind === "currency" ? "money" : kind === "percent" ? "percent" : "number";
 
 const roundingLabels: Record<string, string> = {
   none: "No rounding",
@@ -77,13 +84,23 @@ export function buildSheet(
   doc: ExportDoc,
 ): SheetModel {
   const rows: SheetRow[] = [];
-  const push = (kind: RowKind, ...cells: (SheetCell | null)[]) => {
+  /** All six columns (A–F). Returns the 1-based Excel row number. */
+  const pushWide = (kind: RowKind, ...cells: (SheetCell | null)[]) => {
     rows.push({ kind, cells });
-    return rows.length; // 1-based Excel row number
+    return rows.length;
   };
+  /** Columns A, B, C and the amount column (F) — the common layout. */
+  const push = (
+    kind: RowKind,
+    a: SheetCell | null = null,
+    b: SheetCell | null = null,
+    c: SheetCell | null = null,
+    amount: SheetCell | null = null,
+  ) => pushWide(kind, a, b, c, null, null, amount);
   const ref = (col: (typeof COLS)[number], row: number) => `${col}${row}`;
   const inputs = quote.inputs;
   const unit = builder.unitLabel;
+  const totals = groupTotals(builder, inputs);
 
   push("title", text(doc.businessName || "Quotation"));
   push("subtitle", text(doc.contact || `${builder.name} quote`));
@@ -143,7 +160,7 @@ export function buildSheet(
   push("blank");
 
   // --- Builder inputs -------------------------------------------------------------------------
-  push("section", text(`${builder.name} inputs`));
+  push("section", text(`${builder.name} settings`));
   const fieldRow = new Map<string, number>();
   for (const fd of builder.fields) {
     const label = fd.suffix ? `${fd.label} (${fd.suffix})` : fd.label;
@@ -151,44 +168,106 @@ export function buildSheet(
       fd.key,
       push("row", text(label), {
         value: inputs.fields[fd.key] ?? fd.default,
-        format:
-          fd.kind === "currency"
-            ? "money"
-            : fd.kind === "percent"
-              ? "percent"
-              : "number",
+        format: fieldFormat(fd.kind),
         input: true,
       }),
     );
   }
   push("blank");
 
+  // --- Groups (spools, fabrics, surfaces…) ----------------------------------------------------
+  const fieldRef = (key: string) => {
+    const r = fieldRow.get(key);
+    if (!r) throw new Error(`Unknown field ${key} in ${builder.id} formulas`);
+    return ref("B", r);
+  };
+  const groupCostRef = new Map<string, string>();
+  const groupRange = new Map<string, { start: number; end: number }>();
+  const groupCols = new Map<string, Map<string, (typeof COLS)[number]>>();
+  for (const g of builder.groups ?? []) {
+    const cols = new Map(
+      g.fields.map((fd, i) => [fd.key, COLS[i + 1]] as const),
+    );
+    groupCols.set(g.key, cols);
+    push("section", text(`${g.title} (per ${unit})`));
+    pushWide(
+      "header",
+      text(g.itemLabel),
+      ...g.fields.map((fd) =>
+        text(fd.suffix ? `${fd.label} (${fd.suffix})` : fd.label),
+      ),
+      ...Array(4 - g.fields.length).fill(null),
+      text("Amount"),
+    );
+    const start = rows.length + 1;
+    for (const row of groupRows(inputs, g.key)) {
+      const r = rows.length + 1;
+      pushWide(
+        "row",
+        text(row.name || g.itemLabel),
+        ...g.fields.map((fd) => ({
+          value: num(row.values[fd.key]),
+          format: fieldFormat(fd.kind),
+          input: true,
+        })),
+        ...Array(4 - g.fields.length).fill(null),
+        {
+          value: rowCost(g, row, inputs),
+          formula: g.rowFormula((key) => `${cols.get(key)}${r}`, fieldRef),
+          format: "money",
+        },
+      );
+    }
+    const end = rows.length;
+    groupRange.set(g.key, { start, end });
+    const sub = push("subtotal", text(g.title), null, null, {
+      value: totals.cost(g.key),
+      formula: end >= start ? `SUM(F${start}:F${end})` : "0",
+      format: "money",
+    });
+    groupCostRef.set(g.key, ref(AMT, sub));
+    push("blank");
+  }
+
   // --- Base cost --------------------------------------------------------------------------------
   push("section", text(`Base cost (per ${unit})`));
   push("header", text("Component"), null, null, text("Amount"));
   const baseStart = rows.length + 1;
-  const lineRows: number[] = [];
+  for (const g of builder.groups ?? []) {
+    push("row", text(g.title), null, null, {
+      value: totals.cost(g.key),
+      formula: groupCostRef.get(g.key),
+      format: "money",
+    });
+  }
+  const extraStart = rows.length + 1;
+  const extraLines = builder.baseCost(inputs.fields, totals);
   const formulas = builder.baseFormulas(
-    (key) => {
-      const r = fieldRow.get(key);
-      if (!r) throw new Error(`Unknown field ${key} in ${builder.id} formulas`);
-      return ref("B", r);
+    fieldRef,
+    // Extra lines are laid out consecutively from extraStart, so later lines can refer back.
+    (i) => ref(AMT, extraStart + i),
+    {
+      cost: (key) => groupCostRef.get(key) ?? "0",
+      sum: (key, field) => {
+        const range = groupRange.get(key);
+        const col = groupCols.get(key)?.get(field);
+        return range && col && range.end >= range.start
+          ? `SUM(${col}${range.start}:${col}${range.end})`
+          : "0";
+      },
     },
-    // Base lines are laid out consecutively from baseStart, so later lines can refer back.
-    (i) => ref("D", baseStart + i),
   );
-  result.baseLines.forEach((line, i) => {
-    lineRows.push(
-      push("row", text(line.label), null, null, {
-        value: line.amount,
-        formula: formulas[i],
-        format: "money",
-      }),
-    );
+  extraLines.forEach((line, i) => {
+    push("row", text(line.label), null, null, {
+      value: line.amount,
+      formula: formulas[i],
+      format: "money",
+    });
   });
   const baseSub = push("subtotal", text("Base cost"), null, null, {
     value: result.baseCost,
-    formula: lineRows.length ? `SUM(D${baseStart}:D${rows.length})` : "0",
+    formula:
+      rows.length >= baseStart ? `SUM(F${baseStart}:F${rows.length})` : "0",
     format: "money",
   });
   push("blank");
@@ -227,7 +306,7 @@ export function buildSheet(
   const matSub = push("subtotal", text("Materials"), null, null, {
     value: result.materialsCost,
     formula: inputs.materials.length
-      ? `SUM(D${matStart}:D${rows.length})`
+      ? `SUM(F${matStart}:F${rows.length})`
       : "0",
     format: "money",
   });
@@ -242,7 +321,7 @@ export function buildSheet(
     const v = ref("C", r);
     const formula =
       o.mode === "percent"
-        ? `${v}/100*(${ref("D", baseSub)}+${ref("D", matSub)})`
+        ? `${v}/100*(${ref(AMT, baseSub)}+${ref(AMT, matSub)})`
         : o.mode === "per_order"
           ? `${v}/${qty}`
           : v;
@@ -266,14 +345,14 @@ export function buildSheet(
   });
   const ovSub = push("subtotal", text("Overheads"), null, null, {
     value: result.overheadsCost,
-    formula: inputs.overheads.length ? `SUM(D${ovStart}:D${rows.length})` : "0",
+    formula: inputs.overheads.length ? `SUM(F${ovStart}:F${rows.length})` : "0",
     format: "money",
   });
   push("blank");
 
   // --- Summary --------------------------------------------------------------------------------
   push("section", text("Summary"));
-  const C = (r: number) => ref("D", r);
+  const C = (r: number) => ref(AMT, r);
   const costRow = push(
     "row",
     text(`Cost per ${unit}`, { bold: true }),
@@ -406,7 +485,14 @@ export async function renderXlsx(
       fitToHeight: 0,
     },
   });
-  ws.columns = [{ width: 44 }, { width: 18 }, { width: 16 }, { width: 18 }];
+  ws.columns = [
+    { width: 40 },
+    { width: 16 },
+    { width: 16 },
+    { width: 16 },
+    { width: 16 },
+    { width: 18 },
+  ];
 
   const sym = model.currencySymbol.replace(/"/g, "");
   const formats: Record<CellFormat, string | undefined> = {
@@ -447,7 +533,7 @@ export async function renderXlsx(
       bold = true,
       size?: number,
     ) => {
-      for (let c = 1; c <= 4; c++) {
+      for (let c = 1; c <= 6; c++) {
         const cell = r.getCell(c);
         cell.fill = {
           type: "pattern",
@@ -484,7 +570,7 @@ export async function renderXlsx(
         fillRow(t.stripe, t.text);
         break;
       case "subtotal":
-        for (let c = 1; c <= 4; c++) {
+        for (let c = 1; c <= 6; c++) {
           const cell = r.getCell(c);
           cell.border = { top: thin };
           cell.font = { bold: true, color: { argb: argb(t.text) } };
@@ -544,7 +630,7 @@ const csvCell = (cell: SheetCell | null) => {
 /** Values only (CSV has no formulas or styling); notes are appended at the end. */
 export function renderCsv(model: SheetModel): Uint8Array {
   const lines = model.rows.map((row) =>
-    [0, 1, 2, 3].map((c) => csvCell(row.cells[c] ?? null)).join(","),
+    [0, 1, 2, 3, 4, 5].map((c) => csvCell(row.cells[c] ?? null)).join(","),
   );
   for (const sec of model.notes) {
     lines.push("", csvCell(text(sec.title)));

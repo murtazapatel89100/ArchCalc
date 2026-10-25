@@ -1,23 +1,25 @@
 ## Description
 
-Please include a summary of the change and which issue is fixed. Please also include relevant motivation and context.
+What does this change and why? Link the issue it fixes, if any.
 
 Fixes # (issue number)
 
 ## Type of change
 
-Please delete options that are not relevant.
+- [ ] Bug fix (non-breaking change that fixes an issue)
+- [ ] New feature (non-breaking change that adds functionality)
+- [ ] Breaking change (existing behaviour or saved data changes)
+- [ ] Documentation only
 
-- [ ] Bug fix (non-breaking change which fixes an issue)
-- [ ] New feature (non-breaking change which adds functionality)
-- [ ] Breaking change (fix or feature that would cause existing functionality to not work as expected)
-- [ ] This change requires a documentation update
+## Screenshots / recordings
 
-## Checklist:
+For UI changes, before and after.
 
-- [ ] My code follows the style guidelines of this project
-- [ ] I have performed a self-review of my own code
-- [ ] I have commented my code, particularly in hard-to-understand areas
-- [ ] I have made corresponding changes to the documentation
-- [ ] My changes generate no new warnings (e.g. from Biome or Rust Clippy)
-- [ ] The commit message follows conventional commit format (feat: , fix: , etc.)
+## Checklist
+
+- [ ] The title follows Conventional Commits (`feat:`, `fix:`, `docs:`, …)
+- [ ] `pnpm dlx @biomejs/biome check ./` passes (app and/or web)
+- [ ] `cargo fmt -- --check` and `cargo clippy --workspace --all-targets --all-features -- -D warnings` pass (if Rust changed)
+- [ ] Tests added or updated, and `pnpm test` / `cargo test` pass
+- [ ] Docs in `web/content/docs` updated if users will notice the change
+- [ ] Saved data from older versions still loads (if data formats changed)

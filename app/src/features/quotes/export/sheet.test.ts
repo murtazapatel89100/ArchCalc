@@ -34,6 +34,7 @@ const { buildExportDoc } = await import("./document");
 const { resultFor } = await import("../result");
 const { defaultInputs, defaultQuoteSettings } = await import("../store");
 const { markdownToLines } = await import("./markdown-plain");
+const { normalizeInputs } = await import("../groups");
 
 /**
  * Evaluate the small subset of Excel used by the sheet: cell refs, + - * / ( ),
@@ -41,7 +42,7 @@ const { markdownToLines } = await import("./markdown-plain");
  */
 function evaluate(formula: string, cells: Map<string, number>): number {
   const expr = formula
-    .replace(/SUM\(([A-D])(\d+):\1(\d+)\)/g, (_, col, a, b) => {
+    .replace(/SUM\(([A-F])(\d+):\1(\d+)\)/g, (_, col, a, b) => {
       const refs: string[] = [];
       for (let r = Number(a); r <= Number(b); r++) refs.push(`${col}${r}`);
       return `(${refs.join("+") || "0"})`;
@@ -49,7 +50,7 @@ function evaluate(formula: string, cells: Map<string, number>): number {
     .replace(/>=/g, ">=")
     .replace(/<>/g, "!=")
     .replace(/(?<![<>!=])=(?!=)/g, "==")
-    .replace(/\b([A-D])(\d+)\b/g, (ref) => {
+    .replace(/\b([A-F])(\d+)\b/g, (ref) => {
       if (!cells.has(ref)) throw new Error(`Missing ${ref}`);
       return `(${cells.get(ref)})`;
     });
@@ -74,7 +75,7 @@ function recalc(rows: ReturnType<typeof buildSheet>["rows"]) {
   for (const [i, row] of rows.entries()) {
     for (const [c, cell] of row.cells.entries()) {
       if (!cell) continue;
-      const ref = `${"ABCD"[c]}${i + 1}`;
+      const ref = `${"ABCDEF"[c]}${i + 1}`;
       if (cell.formula) formulas.push([ref, cell.formula]);
       else if (typeof cell.value === "number") cells.set(ref, cell.value);
     }
@@ -138,7 +139,7 @@ describe("spreadsheet formulas match the pricing engine", () => {
       for (const [i, row] of model.rows.entries()) {
         for (const [c, cell] of row.cells.entries()) {
           if (!cell?.formula) continue;
-          const ref = `${"ABCD"[c]}${i + 1}`;
+          const ref = `${"ABCDEF"[c]}${i + 1}`;
           expect(
             cells.get(ref),
             `${builder.id} ${ref} =${cell.formula}`,
@@ -176,7 +177,7 @@ describe("spreadsheet formulas match the pricing engine", () => {
         for (const [i, row] of model.rows.entries()) {
           for (const [c, cell] of row.cells.entries()) {
             if (cell?.formula) {
-              expect(cells.get(`${"ABCD"[c]}${i + 1}`)).toBeCloseTo(
+              expect(cells.get(`${"ABCDEF"[c]}${i + 1}`)).toBeCloseTo(
                 cell.value as number,
                 6,
               );
@@ -198,7 +199,7 @@ describe("spreadsheet formulas match the pricing engine", () => {
     for (const [i, row] of model.rows.entries()) {
       for (const [c, cell] of row.cells.entries()) {
         if (cell?.formula) {
-          expect(cells.get(`${"ABCD"[c]}${i + 1}`)).toBeCloseTo(
+          expect(cells.get(`${"ABCDEF"[c]}${i + 1}`)).toBeCloseTo(
             cell.value as number,
             6,
           );
@@ -224,5 +225,130 @@ describe("CSV and notes", () => {
     expect(
       markdownToLines("**Bold** text\n\n- one\n- two\n\n1. first\n\n> quoted"),
     ).toEqual(["Bold text", "• one", "• two", "1. first", "> quoted"]);
+  });
+});
+
+describe("dynamic groups", () => {
+  const print3d = () => {
+    const b = builders.find((x) => x.id === "print3d");
+    if (!b) throw new Error("print3d builder missing");
+    return b;
+  };
+
+  it("adds every filament spool on the plate", () => {
+    const { model, result } = sheetFor(print3d(), (inp) => {
+      inp.groups = {
+        filaments: [
+          {
+            id: "a",
+            name: "Black",
+            values: { spoolPrice: 1200, spoolWeight: 1000, grams: 60 },
+          },
+          {
+            id: "b",
+            name: "Silk Gold",
+            values: { spoolPrice: 1600, spoolWeight: 1000, grams: 20 },
+          },
+        ],
+      };
+    });
+    // (60 × 1.2 + 20 × 1.6) / 4 items = (72 + 32) / 4 = 26
+    const filament = result.baseLines
+      .filter((l) => l.label.startsWith("Filament"))
+      .map((l) => l.amount);
+    expect(filament).toEqual([18, 8]);
+    expect(result.baseLines.map((l) => l.label)).toContain(
+      "Filament: Silk Gold",
+    );
+    const cells = recalc(model.rows);
+    for (const [i, row] of model.rows.entries()) {
+      for (const [c, cell] of row.cells.entries()) {
+        if (cell?.formula) {
+          expect(cells.get(`${"ABCDEF"[c]}${i + 1}`)).toBeCloseTo(
+            cell.value as number,
+            6,
+          );
+        }
+      }
+    }
+  });
+
+  it("upgrades a single-spool quote saved before groups to the same price", () => {
+    const legacy = {
+      fields: {
+        spoolPrice: 1200,
+        spoolWeight: 1000,
+        plateGrams: 80,
+        itemsPerPlate: 4,
+        printHours: 3,
+        printerWatts: 150,
+        electricityRate: 8,
+        failureRate: 5,
+      },
+      materials: [{ id: "m", name: "Keyring", unitCost: 4, qty: 1 }],
+      overheads: [],
+      profit: { mode: "markup" as const, value: 60 },
+      quantity: 1,
+      discount: { mode: "percent" as const, value: 0 },
+      taxPercent: 0,
+      rounding: "none" as const,
+    };
+    const upgraded = normalizeInputs(print3d(), legacy);
+    expect(upgraded.groups?.filaments).toHaveLength(1);
+    expect(upgraded.groups?.filaments[0].values).toEqual({
+      spoolPrice: 1200,
+      spoolWeight: 1000,
+      grams: 80,
+    });
+    // Old engine: filament 24 + power 0.9 + 5% failure = 26.145 base cost.
+    expect(resultFor(print3d(), upgraded).baseCost).toBeCloseTo(26.145, 9);
+    // Already-current inputs are returned untouched.
+    expect(normalizeInputs(print3d(), upgraded)).toBe(upgraded);
+  });
+
+  it("upgrades freelance hours into a work item and keeps the revision rate", () => {
+    const b = builders.find((x) => x.id === "freelance");
+    if (!b) throw new Error("freelance builder missing");
+    const upgraded = normalizeInputs(b, {
+      ...defaultInputs(b, 0),
+      fields: { hourlyRate: 900, hours: 10, revisions: 1, hoursPerRevision: 3 },
+      groups: undefined,
+    });
+    expect(upgraded.groups?.work[0].values).toEqual({ hours: 10, rate: 900 });
+    expect(upgraded.fields.revisionRate).toBe(900);
+    expect(resultFor(b, upgraded).baseCost).toBe(10 * 900 + 3 * 900);
+  });
+
+  it("sums a field across rows for crafts additives", () => {
+    const b = builders.find((x) => x.id === "crafts");
+    if (!b) throw new Error("crafts builder missing");
+    const { model, result } = sheetFor(b, (inp) => {
+      inp.groups = {
+        materials: [
+          { id: "a", name: "Soy wax", values: { grams: 120, pricePerKg: 400 } },
+          {
+            id: "b",
+            name: "Coconut wax",
+            values: { grams: 30, pricePerKg: 900 },
+          },
+        ],
+      };
+    });
+    const additive = result.baseLines.find(
+      (l) => l.label === "Fragrance / colour",
+    );
+    // 150 g total × 8% × ₹2500/kg = ₹30
+    expect(additive?.amount).toBeCloseTo(30, 9);
+    const cells = recalc(model.rows);
+    for (const [i, row] of model.rows.entries()) {
+      for (const [c, cell] of row.cells.entries()) {
+        if (cell?.formula) {
+          expect(cells.get(`${"ABCDEF"[c]}${i + 1}`)).toBeCloseTo(
+            cell.value as number,
+            6,
+          );
+        }
+      }
+    }
   });
 });

@@ -176,8 +176,9 @@ export default async function Home() {
                 Persistent History
               </h3>
               <p className="text-muted text-base leading-relaxed relative z-10">
-                Your calculations are safely stored locally on your machine via
-                the Rust file storage API, ensuring you never lose your work.
+                Your calculations, workspaces and quotes are saved locally on
+                your machine — no account, no telemetry, and nothing leaves your
+                computer.
               </p>
             </div>
           </div>

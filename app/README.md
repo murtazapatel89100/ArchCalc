@@ -1,22 +1,31 @@
-# ArchCalc Desktop App
+# ArchCalc — desktop app
 
-This directory contains the core desktop application for ArchCalc, built using [Tauri](https://tauri.app/), [SolidJS](https://www.solidjs.com/), and Rust.
+The ArchCalc desktop application: a [Tauri 2](https://tauri.app/) shell with a Rust backend and a [SolidJS](https://www.solidjs.com/) + Tailwind CSS frontend, built with Vite.
 
-## Architecture
+Read [ARCHITECTURE.md](ARCHITECTURE.md) for how the code is organised, and the root [CONTRIBUTING.md](../CONTRIBUTING.md) before opening a pull request.
 
-Please read [ARCHITECTURE.md](ARCHITECTURE.md) for an in-depth explanation of the Rust backend structure, IPC bridge, and SolidJS frontend.
+## Prerequisites
 
-## Development Setup
+[Node.js](https://nodejs.org/) 20+, [pnpm](https://pnpm.io/) 11, the [Rust toolchain](https://rustup.rs/) and the [Tauri prerequisites](https://tauri.app/start/prerequisites/) for your OS.
 
-### Prerequisites
-Ensure you have the Rust toolchain, Node.js, and pnpm installed.
+## Commands
 
-### Commands
+Run from this directory after `pnpm install`:
 
-- **Start Dev Server**: `pnpm tauri dev`
-- **Build App**: `pnpm tauri build`
-- **Format UI**: `pnpm dlx @biomejs/biome check --write ./`
-- **Lint Rust**: `cargo clippy --workspace --all-targets --all-features`
+| Command | What it does |
+| :-- | :-- |
+| `pnpm tauri dev` | Run the app with hot reload |
+| `pnpm tauri build` | Build release bundles (`.deb`, `.rpm`, `.msi`, …) |
+| `pnpm dev` | Run only the frontend in a browser (Tauri commands are unavailable) |
+| `pnpm build` | Production build of the frontend (Vite) |
+| `pnpm test` | Unit tests (Vitest) |
+| `pnpm dlx @biomejs/biome check --write ./` | Format and lint the frontend |
+| `pnpm showcase` | Record the docs videos, clips and screenshots into `../web/public` (needs `ffmpeg` and `pnpm exec playwright install chromium`) |
 
-## Contributing
-See the root [CONTRIBUTING.md](../CONTRIBUTING.md) for overall guidelines.
+Rust, from `src-tauri/`:
+
+| Command | What it does |
+| :-- | :-- |
+| `cargo test` | Backend unit tests |
+| `cargo fmt` | Format |
+| `cargo clippy --workspace --all-targets --all-features -- -D warnings` | Lint (CI fails on any warning) |

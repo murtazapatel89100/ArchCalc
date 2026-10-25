@@ -1,5 +1,7 @@
-import type { QuoteBuilder } from "../builders";
+import type { FieldDef, QuoteBuilder } from "../builders";
+import { num } from "../engine";
 import { formatMoney, formatNumber, formatPercent } from "../format";
+import { groupRows, rowLabel } from "../groups";
 import type { Product, Quote, QuoteResult, QuoteSettings } from "../types";
 
 export interface Row {
@@ -106,16 +108,27 @@ export function buildExportDoc(
         strong: true,
       },
     ];
-    doc.inputs = builder.fields.map((fd) => {
-      const v = quote.inputs.fields[fd.key] ?? fd.default;
-      const value =
-        fd.kind === "currency"
-          ? money(v)
-          : fd.kind === "percent"
-            ? `${formatNumber(v)}%`
-            : `${formatNumber(v)}${fd.suffix ? ` ${fd.suffix}` : ""}`;
-      return { label: fd.label, value };
-    });
+    const show = (fd: FieldDef, v: number) =>
+      fd.kind === "currency"
+        ? money(v)
+        : fd.kind === "percent"
+          ? `${formatNumber(v)}%`
+          : `${formatNumber(v)}${fd.suffix ? ` ${fd.suffix}` : ""}`;
+    const groupInputs = (builder.groups ?? []).flatMap((g) =>
+      groupRows(quote.inputs, g.key).map((row) => ({
+        label: rowLabel(g, row),
+        value: g.fields
+          .map((fd) => `${fd.label} ${show(fd, num(row.values[fd.key]))}`)
+          .join(" · "),
+      })),
+    );
+    doc.inputs = [
+      ...groupInputs,
+      ...builder.fields.map((fd) => ({
+        label: fd.label,
+        value: show(fd, quote.inputs.fields[fd.key] ?? fd.default),
+      })),
+    ];
   }
 
   return doc;

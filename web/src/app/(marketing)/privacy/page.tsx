@@ -4,14 +4,7 @@ export default function PrivacyPage() {
   return (
     <div className="container mx-auto px-4 md:px-6 py-12 md:py-24 max-w-4xl prose">
       <h1>Privacy Policy</h1>
-      <p className="lead">
-        Last updated:{" "}
-        {new Date().toLocaleDateString("en-US", {
-          year: "numeric",
-          month: "long",
-          day: "numeric",
-        })}
-      </p>
+      <p className="lead">Last updated: October 25, 2026</p>
 
       <h2>1. Introduction</h2>
       <p>
@@ -22,10 +15,16 @@ export default function PrivacyPage() {
 
       <h2>2. Information Collection</h2>
       <p>
-        As a desktop application and developer tool platform, {siteConfig.name}{" "}
-        is designed to run locally on your machine. We do not collect personal
-        data, telemetry, or system information unless explicitly configured or
-        opted-in by the user for crash reporting.
+        The {siteConfig.name} desktop application runs entirely on your machine.
+        It has no account system and does not collect or send personal data,
+        telemetry, usage statistics or system information. Your history,
+        workspaces and quotes are stored locally and can be exported or deleted
+        from Settings at any time.
+      </p>
+      <p>
+        This website uses Vercel Web Analytics to count page views. It collects
+        anonymous, aggregated data (such as the page visited, referrer, country
+        and device type), does not use cookies and does not identify you.
       </p>
 
       <h2>3. Data Security</h2>

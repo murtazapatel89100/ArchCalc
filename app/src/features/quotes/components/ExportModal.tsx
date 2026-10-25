@@ -364,7 +364,7 @@ function SheetPreview(props: {
         <thead>
           <tr class="bg-neutral-100 text-neutral-500">
             <th class="w-8 border border-neutral-300" />
-            <For each={["A", "B", "C", "D"]}>
+            <For each={["A", "B", "C", "D", "E", "F"]}>
               {(c) => (
                 <th class="border border-neutral-300 font-normal px-2 py-0.5">
                   {c}
@@ -380,7 +380,7 @@ function SheetPreview(props: {
                 <td class="bg-neutral-100 text-neutral-500 text-center border border-neutral-300 px-1">
                   {i() + 1}
                 </td>
-                <For each={[0, 1, 2, 3]}>
+                <For each={[0, 1, 2, 3, 4, 5]}>
                   {(c) => {
                     const cell = row.cells[c] ?? null;
                     return (
