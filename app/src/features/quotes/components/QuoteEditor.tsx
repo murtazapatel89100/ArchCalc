@@ -110,7 +110,122 @@ export function QuoteEditor(props: {
 
   return (
     <div class="@container flex flex-col gap-4 min-w-0">
-      <Card title={props.builder.name} description="Base cost inputs">
+      <For each={props.builder.groups ?? []}>
+        {(group) => (
+          <Card
+            title={group.title}
+            description={group.hint}
+            actions={
+              <Button
+                size="sm"
+                onClick={() =>
+                  update((q) => {
+                    q.inputs.groups ??= {};
+                    q.inputs.groups[group.key] ??= [];
+                    const rows = q.inputs.groups[group.key];
+                    // New rows start from the last row's values, which is usually closest.
+                    const last = rows[rows.length - 1];
+                    rows.push({
+                      id: quoteActions.newLineId(),
+                      name: "",
+                      values: last
+                        ? { ...last.values }
+                        : Object.fromEntries(
+                            group.fields.map((fd) => [fd.key, fd.default]),
+                          ),
+                    });
+                  })
+                }
+              >
+                <Plus size={14} /> Add {group.itemLabel.toLowerCase()}
+              </Button>
+            }
+          >
+            <Show
+              when={(inputs().groups?.[group.key] ?? []).length > 0}
+              fallback={
+                <EmptyRows text={`No ${group.title.toLowerCase()} yet.`} />
+              }
+            >
+              <div class="flex flex-col gap-2.5">
+                <For each={inputs().groups?.[group.key] ?? []}>
+                  {(row, i) => (
+                    <div class="rounded-lg border border-[var(--color-app-border)] p-3 flex flex-col gap-2.5">
+                      <div class="flex items-center gap-2">
+                        <span class="text-[11px] font-mono text-[var(--color-app-text-secondary)] w-5 text-center shrink-0">
+                          {i() + 1}
+                        </span>
+                        <input
+                          value={row.name}
+                          placeholder={`${group.itemLabel} name, e.g. ${group.defaults[0]?.name ?? ""}`}
+                          aria-label={`${group.itemLabel} name`}
+                          class={cn(inputClass, "flex-1")}
+                          onInput={(e) => {
+                            const v = e.currentTarget.value;
+                            update((q) => {
+                              const r = q.inputs.groups?.[group.key]?.[i()];
+                              if (r) r.name = v;
+                            });
+                          }}
+                        />
+                        <RemoveButton
+                          onClick={() =>
+                            update((q) => {
+                              q.inputs.groups?.[group.key]?.splice(i(), 1);
+                            })
+                          }
+                        />
+                      </div>
+                      <div
+                        class={cn(
+                          "grid grid-cols-1 gap-2.5 pl-7",
+                          {
+                            1: "",
+                            2: "@md:grid-cols-2",
+                            3: "@md:grid-cols-3",
+                          }[group.fields.length] ??
+                            "@md:grid-cols-2 @3xl:grid-cols-4",
+                        )}
+                      >
+                        <For each={group.fields}>
+                          {(fd) => (
+                            <Field label={fd.label}>
+                              <NumberInput
+                                aria-label={`${group.itemLabel} ${i() + 1} ${fd.label}`}
+                                value={row.values[fd.key] ?? fd.default}
+                                prefix={
+                                  fd.kind === "currency" ? cur() : undefined
+                                }
+                                suffix={fd.kind === "percent" ? "%" : fd.suffix}
+                                onChange={(v) =>
+                                  update((q) => {
+                                    const r =
+                                      q.inputs.groups?.[group.key]?.[i()];
+                                    if (r) r.values[fd.key] = v;
+                                  })
+                                }
+                              />
+                            </Field>
+                          )}
+                        </For>
+                      </div>
+                    </div>
+                  )}
+                </For>
+              </div>
+            </Show>
+          </Card>
+        )}
+      </For>
+
+      <Card
+        title={props.builder.groups?.length ? "Settings" : props.builder.name}
+        description={
+          props.builder.groups?.length
+            ? "Values that apply to the whole quote."
+            : "Base cost inputs"
+        }
+      >
         <div class="grid grid-cols-1 @md:grid-cols-2 gap-3">
           <For each={props.builder.fields}>
             {(fd) => (

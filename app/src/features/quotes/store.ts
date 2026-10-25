@@ -2,7 +2,8 @@ import { createEffect, createRoot, on } from "solid-js";
 import { createStore, produce, reconcile } from "solid-js/store";
 import { v4 as uuidv4 } from "uuid";
 import { createLocalStorage } from "../../utils/createLocalStorage";
-import type { QuoteBuilder } from "./builders";
+import { getBuilder, type QuoteBuilder } from "./builders";
+import { normalizeInputs, toRows } from "./groups";
 import type { Product, Quote, QuoteInputs, QuoteSettings } from "./types";
 
 export const QUOTES_KEY = "archcalc_quotes";
@@ -17,11 +18,24 @@ export const defaultQuoteSettings: QuoteSettings = {
   exportKind: "document",
 };
 
+/** Upgrade quotes saved by older versions (e.g. a single spool → a filaments list). */
+const upgradeProduct = (product: Product): Product => {
+  const builder = getBuilder(product.builderId);
+  if (!builder || !Array.isArray(product.quotes)) return product;
+  return {
+    ...product,
+    quotes: product.quotes.map((q) => ({
+      ...q,
+      inputs: normalizeInputs(builder, q.inputs),
+    })),
+  };
+};
+
 const readProducts = (): Product[] => {
   try {
     const raw = localStorage.getItem(QUOTES_KEY);
     const parsed = raw ? JSON.parse(raw) : [];
-    return Array.isArray(parsed) ? parsed : [];
+    return Array.isArray(parsed) ? parsed.map(upgradeProduct) : [];
   } catch (error) {
     console.warn(`Error reading localStorage key "${QUOTES_KEY}":`, error);
     return [];
@@ -69,6 +83,9 @@ export function defaultInputs(
   return {
     fields: Object.fromEntries(
       builder.fields.map((fd) => [fd.key, fd.default]),
+    ),
+    groups: Object.fromEntries(
+      (builder.groups ?? []).map((g) => [g.key, toRows(g.defaults)]),
     ),
     materials: builder.defaults.materials.map((m) => ({ ...m, id: uuidv4() })),
     overheads: builder.defaults.overheads.map((o) => ({ ...o, id: uuidv4() })),
