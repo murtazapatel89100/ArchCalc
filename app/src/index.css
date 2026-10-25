@@ -41,3 +41,69 @@
 ::-webkit-scrollbar-thumb:hover {
 	background: var(--color-app-text-secondary);
 }
+
+/* Quote Studio export preview — mirrors the PDF templates */
+.quote-preview {
+	color: var(--qp-text);
+	font-size: 12px;
+	line-height: 1.45;
+	color-scheme: light;
+}
+.quote-preview .qp-band {
+	display: flex;
+	justify-content: space-between;
+	gap: 16px;
+	padding: 22px 28px;
+	background: var(--qp-band);
+	color: var(--qp-band-text);
+	border-bottom: 2px solid var(--qp-accent);
+}
+.quote-preview .qp-business {
+	font-size: 20px;
+	font-weight: 700;
+}
+.quote-preview .qp-contact {
+	font-size: 10px;
+	opacity: 0.85;
+	margin-top: 2px;
+}
+.quote-preview .qp-label {
+	font-size: 10px;
+	font-weight: 700;
+	letter-spacing: 0.2em;
+}
+.quote-preview .qp-body {
+	padding: 20px 28px 8px;
+}
+.quote-preview .qp-body h2 {
+	color: var(--qp-accent);
+	font-size: 14px;
+	font-weight: 700;
+	margin: 16px 0 6px;
+}
+.quote-preview .qp-body p {
+	margin: 4px 0 8px;
+}
+.quote-preview .qp-body table {
+	width: 100%;
+	border-collapse: collapse;
+	margin-bottom: 8px;
+}
+.quote-preview .qp-body th {
+	background: var(--qp-accent);
+	color: var(--qp-accent-text);
+	font-weight: 600;
+	padding: 5px 8px;
+}
+.quote-preview .qp-body td {
+	padding: 5px 8px;
+	border-bottom: 1px solid var(--qp-border);
+}
+.quote-preview .qp-body tbody tr:nth-child(even) td {
+	background: var(--qp-stripe);
+}
+.quote-preview .qp-footer {
+	padding: 12px 28px 20px;
+	font-size: 9px;
+	color: var(--qp-muted);
+}
