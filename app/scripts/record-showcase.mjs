@@ -6,8 +6,8 @@
  * tour of every feature, captures frames through the Chrome DevTools screencast (much sharper than
  * Playwright's built-in recorder), and encodes them with ffmpeg.
  *
- *   node scripts/record-showcase.mjs docs                 → web/public/videos (full tour, clips, poster)
- *   node scripts/record-showcase.mjs linkedin [out.mp4]   → 1080p cut with intro, captions and outro
+ *   pnpm showcase   → web/public/videos (full tour, per-feature clips, poster)
+ *                     web/public/images/screens (screenshots for the docs)
  *
  * Requires ffmpeg on PATH and a Playwright Chromium (`pnpm exec playwright install chromium`).
  */
@@ -22,14 +22,8 @@ import { createServer } from "vite";
 const appDir = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const repoDir = path.resolve(appDir, "..");
 const screenshotDir = path.join(repoDir, "web", "public", "images", "screens");
-const mode = process.argv[2] === "linkedin" ? "linkedin" : "docs";
-
-const MODES = {
-  // CSS viewport × deviceScaleFactor = captured frame size.
-  docs: { width: 1280, height: 800, dpr: 1.5, out: { width: 1280, height: 800 }, pace: 1 },
-  linkedin: { width: 1600, height: 900, dpr: 1.2, out: { width: 1920, height: 1080 }, pace: 1.25 },
-};
-const cfg = MODES[mode];
+// CSS viewport × deviceScaleFactor = captured frame size; frames are downscaled to the viewport.
+const cfg = { width: 1280, height: 800, dpr: 1.5 };
 
 const ffmpeg = (...args) =>
   execFileSync("ffmpeg", ["-hide_banner", "-loglevel", "error", "-y", ...args], {
@@ -37,10 +31,10 @@ const ffmpeg = (...args) =>
   });
 
 // ---------------------------------------------------------------------------------------------
-// Browser-side setup: IPC mock, fake cursor, captions and title cards.
+// Browser-side setup: IPC mock and a visible fake cursor.
 // ---------------------------------------------------------------------------------------------
 
-function browserSetup({ framed }) {
+function browserSetup() {
   // Tauri IPC mock — mirrors the Rust commands closely enough for a demo.
   const M = {
     sin: Math.sin,
@@ -129,34 +123,7 @@ function browserSetup({ framed }) {
     .__sc-ripple { position: fixed; z-index: 2147483646; width: 34px; height: 34px; margin: -17px 0 0 -17px; border-radius: 50%;
       border: 2px solid rgba(79,140,255,.9); pointer-events: none; animation: __sc-ripple 450ms ease-out forwards; }
     @keyframes __sc-ripple { from { transform: scale(.3); opacity: 1 } to { transform: scale(1.4); opacity: 0 } }
-    #__sc-caption { position: fixed; z-index: 2147483645; left: 50%; bottom: ${framed ? "18px" : "22px"}; transform: translate(-50%, 16px);
-      opacity: 0; transition: opacity 350ms, transform 350ms; pointer-events: none; display: flex; align-items: center; gap: 14px;
-      padding: ${framed ? "12px 22px" : "9px 18px"}; border-radius: 999px; background: rgba(11,15,20,.82); backdrop-filter: blur(14px);
-      border: 1px solid rgba(255,255,255,.12); box-shadow: 0 12px 40px rgba(0,0,0,.45); font-family: Inter, system-ui, sans-serif; white-space: nowrap; }
-    #__sc-caption.show { opacity: 1; transform: translate(-50%, 0); }
-    #__sc-caption .dot { width: 10px; height: 10px; border-radius: 50%; background: #4F8CFF; box-shadow: 0 0 12px #4F8CFF; }
-    #__sc-caption .title { color: #fff; font-weight: 650; font-size: ${framed ? "19px" : "15px"}; }
-    #__sc-caption .sub { color: #9CA3AF; font-size: ${framed ? "16px" : "13px"}; }
-    #__sc-caption .badge { color: #0B0F14; background: #4F8CFF; font-weight: 700; font-size: 11px; padding: 3px 8px; border-radius: 999px; letter-spacing: .06em; }
-    .__sc-card-on #__sc-cursor, .__sc-clean #__sc-cursor, .__sc-clean #__sc-caption, .__sc-clean .__sc-ripple { visibility: hidden; }
-    #__sc-card { position: fixed; inset: 0; z-index: 2147483640; display: flex; flex-direction: column; align-items: center; justify-content: center;
-      gap: 22px; background: radial-gradient(1200px 600px at 50% 40%, #16233d 0%, #0B0F14 60%); color: #fff; opacity: 0;
-      transition: opacity 600ms; pointer-events: none; font-family: Inter, system-ui, sans-serif; text-align: center; }
-    #__sc-card.show { opacity: 1; }
-    #__sc-card .logo { width: 84px; height: 84px; border-radius: 22px; background: linear-gradient(135deg, #4F8CFF, #8B5CF6);
-      display: flex; align-items: center; justify-content: center; font-size: 44px; font-weight: 800; box-shadow: 0 20px 60px rgba(79,140,255,.35); }
-    #__sc-card h1 { font-size: 64px; font-weight: 800; letter-spacing: -.03em; margin: 0; }
-    #__sc-card p { font-size: 24px; color: #9CA3AF; margin: 0; max-width: 900px; line-height: 1.4; }
-    #__sc-card .chips { display: flex; gap: 10px; margin-top: 6px; }
-    #__sc-card .chips span { padding: 8px 16px; border-radius: 999px; border: 1px solid rgba(255,255,255,.14); background: rgba(255,255,255,.05);
-      font-size: 17px; color: #E5E7EB; }
-    ${
-      framed
-        ? `html { background: radial-gradient(1400px 700px at 20% 0%, #1d2b4f 0%, #0B0F14 55%), #0B0F14 !important; height: 100%; overflow: hidden; }
-           body { transform: scale(.86); transform-origin: 50% 42%; border-radius: 14px; overflow: hidden;
-             box-shadow: 0 30px 90px rgba(0,0,0,.6), 0 0 0 1px rgba(255,255,255,.08); }`
-        : ""
-    }`;
+    .__sc-clean #__sc-cursor, .__sc-clean .__sc-ripple { visibility: hidden; }`;
 
   const arrow = `<svg viewBox="0 0 24 24" width="22" height="22"><path d="M4 2l15 8.5-6.6 1.6L9.3 19z" fill="#fff" stroke="#111" stroke-width="1.4" stroke-linejoin="round"/></svg>`;
 
@@ -165,7 +132,7 @@ function browserSetup({ framed }) {
     style.textContent = css;
     document.head.appendChild(style);
 
-    // Overlays live on <html>, outside the (possibly scaled) <body>.
+    // The cursor lives on <html> so app styles never affect it.
     const root = document.documentElement;
     const cursor = document.createElement("div");
     cursor.id = "__sc-cursor";
@@ -194,37 +161,8 @@ function browserSetup({ framed }) {
     );
     window.addEventListener("mouseup", () => cursor.classList.remove("down"), true);
 
-    const caption = document.createElement("div");
-    caption.id = "__sc-caption";
-    root.appendChild(caption);
-    const card = document.createElement("div");
-    card.id = "__sc-card";
-    root.appendChild(card);
   });
 
-  window.__sc = {
-    caption(title, sub, badge) {
-      const el = document.getElementById("__sc-caption");
-      if (!el) return;
-      if (!title) {
-        el.classList.remove("show");
-        return;
-      }
-      el.innerHTML = `${badge ? `<span class="badge">${badge}</span>` : '<span class="dot"></span>'}<span class="title">${title}</span>${sub ? `<span class="sub">${sub}</span>` : ""}`;
-      el.classList.add("show");
-    },
-    card(html) {
-      const el = document.getElementById("__sc-card");
-      if (!el) return;
-      document.documentElement.classList.toggle("__sc-card-on", Boolean(html));
-      if (html) {
-        el.innerHTML = html;
-        el.classList.add("show");
-      } else {
-        el.classList.remove("show");
-      }
-    },
-  };
 }
 
 // ---------------------------------------------------------------------------------------------
@@ -272,11 +210,11 @@ function encodeFrames(frames, endTime, startTime, outFile) {
   list.push(`file '${usable.at(-1).file}'`);
   const listFile = path.join(path.dirname(usable[0].file), "frames.txt");
   fs.writeFileSync(listFile, list.join("\n"));
-  const { width, height } = cfg.out;
+  const { width, height } = cfg;
   ffmpeg(
     "-f", "concat", "-safe", "0", "-i", listFile,
     "-vf", `fps=30,scale=${width}:${height}:flags=lanczos,format=yuv420p`,
-    "-c:v", "libx264", "-preset", "slow", "-crf", mode === "linkedin" ? "16" : "18",
+    "-c:v", "libx264", "-preset", "slow", "-crf", "18",
     "-movflags", "+faststart", outFile,
   );
 }
@@ -285,27 +223,16 @@ function encodeFrames(frames, endTime, startTime, outFile) {
 // The tour
 // ---------------------------------------------------------------------------------------------
 
-/** Clicks and caption changes, used to sync sound effects in the LinkedIn cut. */
-const events = [];
-
 async function tour(page, marks) {
-  const pace = cfg.pace;
-  const wait = (ms) => page.waitForTimeout(ms * pace);
+  const wait = (ms) => page.waitForTimeout(ms);
   const now = () => Date.now() / 1000;
   const section = async (name, fn) => {
     const start = now();
     await fn();
     marks.push({ name, start, end: now() });
   };
-  // Captions are for the LinkedIn cut; the docs pages explain each clip in text instead.
-  const caption = (title, sub, badge) => {
-    if (mode !== "linkedin") return Promise.resolve();
-    if (title) events.push({ type: "caption", t: Date.now() / 1000 });
-    return page.evaluate(([t, s, b]) => window.__sc.caption(t, s, b), [title, sub, badge]);
-  };
-  /** Docs mode: save a clean screenshot (no cursor or caption) for the documentation pages. */
+  /** Save a clean screenshot (no cursor) for the documentation pages. */
   const shot = async (name) => {
-    if (mode !== "docs") return;
     await page.evaluate(() => document.documentElement.classList.add("__sc-clean"));
     await page.screenshot({ path: path.join(screenshotDir, `${name}.png`) });
     await page.evaluate(() => document.documentElement.classList.remove("__sc-clean"));
@@ -324,7 +251,6 @@ async function tour(page, marks) {
   };
   const click = async (locator, after = 350) => {
     await moveTo(locator);
-    events.push({ type: "click", t: Date.now() / 1000 });
     await page.mouse.down();
     await page.mouse.up();
     await wait(after);
@@ -339,7 +265,6 @@ async function tour(page, marks) {
   await page.mouse.move(mouse.x, mouse.y);
 
   await section("dashboard", async () => {
-    await caption("Command bar", "maths, unit conversions & dev commands in one box");
     await wait(900);
     const box = page.getByPlaceholder("Type a calculation, conversion or command...");
     await click(box);
@@ -362,7 +287,6 @@ async function tour(page, marks) {
 
   await section("calculator", async () => {
     await nav("Calculator");
-    await caption("Scientific calculator", "parsed & evaluated by a custom Rust AST engine");
     await wait(500);
     for (const k of ["1", "2", "8"]) await click(key(k), 180);
     await page.keyboard.type("*");
@@ -389,7 +313,6 @@ async function tour(page, marks) {
 
   await section("history", async () => {
     await nav("History");
-    await caption("Persistent history", "every result, searchable");
     await wait(900);
     await click(page.getByPlaceholder("Search history..."));
     await type("km");
@@ -402,7 +325,6 @@ async function tour(page, marks) {
 
   await section("workspaces", async () => {
     await nav("Workspaces");
-    await caption("Workspaces", "notepad-style sheets with variables & live results");
     await wait(600);
     const editor = page.locator("textarea").first();
     await click(editor);
@@ -417,7 +339,6 @@ async function tour(page, marks) {
 
   await section("converters", async () => {
     await nav("Converters");
-    await caption("Unit converters", "length, weight, temperature & storage");
     await wait(500);
     const value = page.locator('main input[inputmode="decimal"]').first();
     await click(value);
@@ -436,7 +357,6 @@ async function tour(page, marks) {
 
   await section("devtools", async () => {
     await nav("Developer Tools");
-    await caption("Developer tools", "hashes, UUIDs, Base64, JSON, binary & hex");
     await wait(1000);
     await shot("devtools");
     await click(page.getByText("JSON Formatter", { exact: true }), 500);
@@ -447,21 +367,19 @@ async function tour(page, marks) {
     await click(page.locator("main button").filter({ has: page.locator("svg.lucide-arrow-left") }).first(), 400);
     await click(page.getByText("Hash Generator", { exact: true }), 500);
     await click(page.locator("main textarea, main input[type=text]").first());
-    await type("hello linkedin", 40);
+    await type("hello archcalc", 40);
     await wait(700);
     await click(page.locator("main button", { hasText: /^SHA512$/ }), 1100);
   });
 
   await section("system", async () => {
     await nav("System");
-    await caption("System monitor", "live CPU, memory & network");
     await wait(4200);
     await shot("system");
   });
 
   await section("quote-studio", async () => {
     await nav("Quote Studio");
-    await caption("Quote Studio", "cost & quote builders for everyday work", "NEW");
     await wait(1600);
     await shot("quote-studio");
     await click(page.getByText("3D Print Costing"), 600);
@@ -469,7 +387,6 @@ async function tour(page, marks) {
     await type("Dragon keychain");
     await click(page.getByRole("button", { name: "Create" }), 900);
 
-    await caption("3D print costing", "filament per plate ÷ items, power, failures, materials, margin");
     const field = (label) => page.locator("label", { hasText: label }).locator("input").first();
     await click(field("Filament used per plate"));
     await page.keyboard.press("Control+A");
@@ -507,7 +424,6 @@ async function tour(page, marks) {
     await wait(1200);
     await shot("quote-editor");
 
-    await caption("Save quotes per material", "duplicate, tweak and compare side by side");
     await click(page.getByLabel("Quote name"));
     await page.keyboard.press("Control+A");
     await type("PLA Basic");
@@ -523,7 +439,6 @@ async function tour(page, marks) {
     await shot("quote-compare");
     await click(page.getByRole("button", { name: "PLA Basic" }).first(), 700);
 
-    await caption("Export to PDF, Word or Markdown", "five templates with a live preview");
     await click(page.getByRole("button", { name: "Export quote" }), 1200);
     for (const t of ["Sunset", "Emerald", "Midnight", "Classic Navy"]) {
       await click(page.getByRole("button", { name: t }), 1000);
@@ -534,14 +449,11 @@ async function tour(page, marks) {
 
   await section("settings", async () => {
     await nav("Settings");
-    await caption("Settings", "export, import & keyboard shortcuts");
     await wait(700);
     await click(page.getByRole("button", { name: "Keyboard Shortcuts" }), 1200);
     await click(page.getByRole("button", { name: "Data" }), 1100);
     await shot("settings");
   });
-
-  await caption(null);
 }
 
 // ---------------------------------------------------------------------------------------------
@@ -561,7 +473,7 @@ const context = await browser.newContext({
   viewport: { width: cfg.width, height: cfg.height },
   deviceScaleFactor: cfg.dpr,
 });
-await context.addInitScript(browserSetup, { framed: mode === "linkedin" });
+await context.addInitScript(browserSetup);
 const page = await context.newPage();
 page.on("pageerror", (e) => console.error("[page error]", e.message));
 
@@ -579,33 +491,8 @@ const recorder = await startRecorder(page, frameDir);
 await page.waitForTimeout(300);
 const startTime = Date.now() / 1000;
 const marks = [];
-let appStart = startTime;
-let appEnd = startTime;
-
-const card = (html, ms) =>
-  page.evaluate(([h]) => window.__sc.card(h), [html]).then(() => page.waitForTimeout(ms));
-
-if (mode === "linkedin") {
-  await card(
-    `<div class="logo">Λ</div><h1>ArchCalc</h1>
-     <p>A blazing-fast desktop calculator & everyday toolkit</p>
-     <div class="chips"><span>🦀 Rust</span><span>⚡ Tauri</span><span>◆ SolidJS</span></div>`,
-    3600,
-  );
-  appStart = Date.now() / 1000;
-  await card(null, 700);
-}
 
 await tour(page, marks);
-
-if (mode === "linkedin") {
-  appEnd = Date.now() / 1000;
-  await card(
-    `<div class="logo">Λ</div><h1>ArchCalc</h1>
-     <p>Open source · Linux & Windows<br/>github.com/murtazapatel89100/ArchCalc</p>`,
-    4200,
-  );
-}
 await page.waitForTimeout(400);
 const endTime = await recorder.stop();
 await browser.close();
@@ -613,64 +500,33 @@ await server.close();
 
 console.log(`captured ${recorder.frames.length} frames over ${(endTime - startTime).toFixed(1)}s`);
 
-if (mode === "linkedin") {
-  const out = path.resolve(process.argv[3] ?? path.join(os.homedir(), "Downloads", "archcalc-linkedin-showcase.mp4"));
-  fs.mkdirSync(path.dirname(out), { recursive: true });
-  const silent = path.join(frameDir, "silent.mp4");
-  encodeFrames(recorder.frames, endTime, startTime, silent);
-
-  // Original synthesized soundtrack, synced to clicks and captions.
-  const rel = (t) => Number((t - startTime).toFixed(3));
-  const eventsFile = path.join(frameDir, "events.json");
-  fs.writeFileSync(
-    eventsFile,
-    JSON.stringify({
-      duration: rel(endTime),
-      appStart: rel(appStart),
-      appEnd: rel(appEnd),
-      events: events.map((e) => ({ type: e.type, t: rel(e.t) })),
-    }),
-  );
-  const wav = path.join(frameDir, "soundtrack.wav");
-  execFileSync("python3", [path.join(appDir, "scripts", "showcase-audio.py"), eventsFile, wav], {
-    stdio: "inherit",
-  });
+const videoDir = path.join(repoDir, "web", "public", "videos");
+fs.mkdirSync(videoDir, { recursive: true });
+const full = path.join(videoDir, "archcalc-showcase.mp4");
+encodeFrames(recorder.frames, endTime, startTime, full);
+ffmpeg(
+  "-i", full, "-c:v", "libvpx-vp9", "-crf", "38", "-b:v", "0", "-row-mt", "1",
+  "-deadline", "good", "-cpu-used", "4", "-an",
+  path.join(videoDir, "archcalc-showcase.webm"),
+);
+const at = (t) => (t - startTime).toFixed(2);
+const quotes = marks.find((m) => m.name === "quote-studio");
+ffmpeg("-ss", at(quotes.start + 9), "-i", full, "-frames:v", "1", "-q:v", "3", path.join(videoDir, "archcalc-showcase-poster.jpg"));
+for (const m of marks) {
   ffmpeg(
-    "-i", silent, "-i", wav,
-    "-af", "aecho=0.8:0.6:70|140:0.16|0.08,loudnorm=I=-16:TP=-1.5:LRA=11",
-    "-c:v", "copy", "-c:a", "aac", "-b:a", "192k", "-ar", "48000", "-shortest",
-    "-movflags", "+faststart", out,
+    "-ss", at(m.start), "-to", at(m.end + 0.4), "-i", full,
+    "-c:v", "libx264", "-preset", "slow", "-crf", "20", "-movflags", "+faststart", "-an",
+    path.join(videoDir, `clip-${m.name}.mp4`),
   );
-  console.log(`wrote ${out}`);
-} else {
-  const videoDir = path.join(repoDir, "web", "public", "videos");
-  fs.mkdirSync(videoDir, { recursive: true });
-  const full = path.join(videoDir, "archcalc-showcase.mp4");
-  encodeFrames(recorder.frames, endTime, startTime, full);
-  ffmpeg(
-    "-i", full, "-c:v", "libvpx-vp9", "-crf", "38", "-b:v", "0", "-row-mt", "1",
-    "-deadline", "good", "-cpu-used", "4", "-an",
-    path.join(videoDir, "archcalc-showcase.webm"),
-  );
-  const at = (t) => (t - startTime).toFixed(2);
-  const quotes = marks.find((m) => m.name === "quote-studio");
-  ffmpeg("-ss", at(quotes.start + 9), "-i", full, "-frames:v", "1", "-q:v", "3", path.join(videoDir, "archcalc-showcase-poster.jpg"));
-  for (const m of marks) {
-    ffmpeg(
-      "-ss", at(m.start), "-to", at(m.end + 0.4), "-i", full,
-      "-c:v", "libx264", "-preset", "slow", "-crf", "20", "-movflags", "+faststart", "-an",
-      path.join(videoDir, `clip-${m.name}.mp4`),
-    );
-  }
-  fs.writeFileSync(
-    path.join(videoDir, "chapters.json"),
-    `${JSON.stringify(
-      marks.map((m) => ({ name: m.name, start: Number(at(m.start)), end: Number(at(m.end)) })),
-      null,
-      2,
-    )}\n`,
-  );
-  console.log(`wrote videos to ${videoDir}`);
 }
+fs.writeFileSync(
+  path.join(videoDir, "chapters.json"),
+  `${JSON.stringify(
+    marks.map((m) => ({ name: m.name, start: Number(at(m.start)), end: Number(at(m.end)) })),
+    null,
+    2,
+  )}\n`,
+);
+console.log(`wrote videos to ${videoDir}`);
 
 fs.rmSync(frameDir, { recursive: true, force: true });
