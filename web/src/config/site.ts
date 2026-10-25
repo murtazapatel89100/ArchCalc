@@ -11,7 +11,7 @@ export const siteConfig = {
   // GitHub does not expose AUR download counts, so this is a manually
   // maintained estimate that gets added to the GitHub asset download total.
   stats: {
-    aurDownloads: 1000,
+    aurDownloads: 2000,
   },
   nav: [
     {
@@ -22,6 +22,8 @@ export const siteConfig = {
   sidebar: [
     { name: "Introduction", href: "/docs" },
     { name: "Getting Started", href: "/docs/getting-started" },
+    { name: "Feature Tour", href: "/docs/features" },
+    { name: "Quote Studio", href: "/docs/quote-studio" },
     { name: "Architecture", href: "/docs/architecture" },
   ],
 };

@@ -4,6 +4,9 @@
 
 @source "../../node_modules/fumadocs-ui/dist/**/*.js";
 
+/* next-themes toggles a `.dark` class on <html>; make `dark:` follow it instead of the OS setting. */
+@custom-variant dark (&:where(.dark, .dark *));
+
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
@@ -11,15 +14,25 @@
   --color-primary-dark: #2563eb; /* Blue 600 */
   --color-surface: var(--surface);
   --color-surface-border: var(--surface-border);
+  --color-muted: var(--muted);
   --font-sans: var(--font-geist-sans);
   --font-mono: var(--font-geist-mono);
 }
 
 :root {
-  /* Default to dark mode for ArchCalc */
+  color-scheme: light;
+  --background: #fafafa; /* Zinc 50 */
+  --foreground: #09090b; /* Zinc 950 */
+  --muted: #52525b; /* Zinc 600 */
+  --surface: rgba(255, 255, 255, 0.7);
+  --surface-border: rgba(9, 9, 11, 0.08);
+}
+
+.dark {
   color-scheme: dark;
   --background: #09090b; /* Zinc 950 */
   --foreground: #fafafa; /* Zinc 50 */
+  --muted: #a1a1aa; /* Zinc 400 */
   --surface: rgba(255, 255, 255, 0.05);
   --surface-border: rgba(255, 255, 255, 0.1);
 }

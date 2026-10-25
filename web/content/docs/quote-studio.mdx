@@ -1,0 +1,87 @@
+---
+title: Quote Studio
+description: Work out what your products cost, add a margin, save several quotes per product, and export polished PDF or Word quotes.
+---
+
+Quote Studio is ArchCalc's cost and quotation builder. Pick a builder tile for the kind of work you do, enter your costs, and ArchCalc works out the cost per unit, your profit, and the final price, live as you type.
+
+<Video src="/videos/clip-quote-studio.mp4" title="Quote Studio walkthrough" />
+
+## Builders
+
+Each builder has its own inputs for the **base cost** of one unit. Everything else — materials, overheads, profit, discount and tax — is shared.
+
+| Builder | One unit is | Base cost inputs |
+| :--- | :--- | :--- |
+| **3D Print Costing** | item | Spool price & weight, filament grams per plate, items per plate, print time × printer watts × electricity rate, failure allowance |
+| **Freelance / Services** | project | Hourly rate × hours, revision rounds × hours per revision |
+| **Home Bakery & Food** | piece | Pieces per batch, oven/gas and labour per batch (ingredients are entered per batch) |
+| **Tailoring & Stitching** | garment | Fabric metres × price per metre, lining, stitching labour |
+| **Handmade Crafts** | piece | Base material grams × price per kg, fragrance/colour load |
+| **Events & Catering** | plate | Food, disposables and serving staff per plate |
+| **Printing & Photocopy** | copy | B/W and colour pages × rate, binding, lamination |
+| **Home Painting & Repair** | job | Area × coats ÷ coverage × paint price, labour days × day rate |
+
+### Example: 3D printing
+
+A ₹1,200 spool weighs 1,000 g, so filament costs ₹1.20 per gram. A plate that uses 80 g and holds 4 keychains costs:
+
+```text
+filament per item = 80 g × ₹1.20 ÷ 4 items = ₹24.00
+```
+
+Machine electricity (`hours × watts ÷ 1000 × rate per kWh ÷ items`) and the failure allowance are added on top. A keyring at ₹4 is added as a raw material.
+
+## Shared sections
+
+![Quote editor for a 3D-printed keychain: base cost inputs on the left and the live price breakdown on the right](/images/screens/quote-editor.png)
+
+### Raw materials
+
+Add as many rows as you need — name, unit cost and quantity per item. For example, a keychain might need one keyring at ₹4 and one jump ring at ₹1.
+
+### Overheads & utilities
+
+Electricity, manpower, packaging, rent and so on. Each row has a type:
+
+- **% of cost** — a percentage of base cost + materials.
+- **Fixed per item** — a flat amount added to every unit.
+- **Fixed per order** — a flat amount spread across the order quantity (e.g. a ₹5,000 venue setup over 100 plates adds ₹50 per plate).
+
+### Profit
+
+| Method | How the price is worked out |
+| :--- | :--- |
+| Markup % on cost | `price = cost × (1 + markup%)` |
+| Margin % of price | `price = cost ÷ (1 − margin%)` — profit is that share of the selling price |
+| Fixed profit per item | `price = cost + amount` |
+| Multiplier (×) | `price = cost × multiplier` (e.g. 2.5×) |
+| Target selling price | You set the price; ArchCalc shows the margin it gives |
+
+You can also set the **order quantity**, a **discount** (% or fixed), **tax / GST**, and **price rounding** (round up to 1, 5 or 10, or a charm price ending in 9). Rounding always goes up so it never eats into your margin.
+
+ArchCalc warns you when the price is below cost or the margin is 100% or more.
+
+## Products and saved quotes
+
+Quotes are grouped under **products**. A product can hold several quotes — for example *PLA Basic*, *PETG* and *Silk PLA* for the same keychain — and you can duplicate, rename or delete them. The **Compare** tab lines all quotes up side by side and highlights the cheapest cost and highest margin.
+
+![Compare view showing PLA Basic and PETG quotes side by side, with the best values highlighted](/images/screens/quote-compare.png)
+
+Everything is saved on your device automatically and included in **Settings → Data** export and import.
+
+## Exporting
+
+Click **Export quote** to open the export window:
+
+1. Pick a template — **Classic Navy**, **Minimal Mono**, **Emerald**, **Sunset** or **Midnight**. The preview updates instantly.
+2. Choose whether to **include the cost breakdown**. Turn it off for a customer-facing quote that shows only the price, discount, tax and total.
+3. Export as **PDF**, **Word (.docx)** or **Markdown**, and choose where to save it.
+
+![Export window with the Sunset template selected and a live preview of the quotation](/images/screens/quote-export.png)
+
+The quote is first written as Markdown, then rendered to a styled PDF, so all three formats contain the same content.
+
+### Quote settings
+
+Use the **Quote settings** button to set your business name and contact line (shown in the header of every export), your currency, the default template, and a default tax rate for new quotes.

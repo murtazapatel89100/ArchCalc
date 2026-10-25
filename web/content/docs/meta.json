@@ -1,4 +1,10 @@
 {
   "title": "Documentation",
-  "pages": ["index", "getting-started", "architecture"]
+  "pages": [
+    "index",
+    "getting-started",
+    "features",
+    "quote-studio",
+    "architecture"
+  ]
 }
