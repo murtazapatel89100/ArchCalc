@@ -21,6 +21,7 @@
 		"apexcharts": "^8.4.1",
 		"clsx": "^2.1.1",
 		"docx": "^9.14.0",
+		"exceljs": "^4.4.0",
 		"html-to-pdfmake": "^2.5.36",
 		"js-base64": "^3.9.4",
 		"js-sha256": "^1.0.0",

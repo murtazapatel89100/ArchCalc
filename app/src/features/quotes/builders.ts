@@ -37,8 +37,16 @@ export interface QuoteBuilder {
   defaultQuantity?: number;
   fields: FieldDef[];
   baseCost: (f: Fields) => CostLine[];
-  /** Materials are entered per batch and spread by this divisor (defaults to 1). */
-  materialsDivisor?: (f: Fields) => number;
+  /**
+   * The same base cost as spreadsheet formulas, one per `baseCost` line and in the same order,
+   * so exported sheets stay live. `r(key)` is the cell holding a field; `line(i)` an earlier line.
+   */
+  baseFormulas: (
+    r: (key: string) => string,
+    line: (i: number) => string,
+  ) => string[];
+  /** Field whose value spreads per-batch materials across units (e.g. pieces per batch). */
+  materialsDivisorField?: string;
   materialsHint: string;
   defaults: {
     materials: Omit<MaterialLine, "id">[];
@@ -131,6 +139,11 @@ export const builders: QuoteBuilder[] = [
         },
       ];
     },
+    baseFormulas: (r, line) => [
+      `IFERROR(${r("plateGrams")}*${r("spoolPrice")}/${r("spoolWeight")}/${r("itemsPerPlate")},0)`,
+      `IFERROR(${r("printHours")}*${r("printerWatts")}/1000*${r("electricityRate")}/${r("itemsPerPlate")},0)`,
+      `(${line(0)}+${line(1)})*${r("failureRate")}/100`,
+    ],
     materialsHint: "Add-ons per item, e.g. keyring, magnet, insert nut.",
     defaults: {
       materials: [{ name: "Keyring", unitCost: 4, qty: 1 }],
@@ -183,6 +196,10 @@ export const builders: QuoteBuilder[] = [
           f(x, "hourlyRate") * f(x, "revisions") * f(x, "hoursPerRevision"),
       },
     ],
+    baseFormulas: (r) => [
+      `${r("hourlyRate")}*${r("hours")}`,
+      `${r("hourlyRate")}*${r("revisions")}*${r("hoursPerRevision")}`,
+    ],
     materialsHint: "Software licences, stock assets, travel…",
     defaults: {
       materials: [],
@@ -227,7 +244,11 @@ export const builders: QuoteBuilder[] = [
         amount: safeDiv(f(x, "labourCost"), f(x, "batchYield")),
       },
     ],
-    materialsDivisor: (x) => f(x, "batchYield"),
+    materialsDivisorField: "batchYield",
+    baseFormulas: (r) => [
+      `IFERROR(${r("fuelCost")}/${r("batchYield")},0)`,
+      `IFERROR(${r("labourCost")}/${r("batchYield")},0)`,
+    ],
     materialsHint:
       "Ingredients for the whole batch — spread across pieces automatically.",
     defaults: {
@@ -272,6 +293,11 @@ export const builders: QuoteBuilder[] = [
       { label: "Fabric", amount: f(x, "fabricMetres") * f(x, "fabricRate") },
       { label: "Lining", amount: f(x, "liningCost") },
       { label: "Stitching", amount: f(x, "stitching") },
+    ],
+    baseFormulas: (r) => [
+      `${r("fabricMetres")}*${r("fabricRate")}`,
+      r("liningCost"),
+      r("stitching"),
     ],
     materialsHint: "Buttons, zips, thread, embroidery…",
     defaults: {
@@ -327,6 +353,10 @@ export const builders: QuoteBuilder[] = [
         },
       ];
     },
+    baseFormulas: (r) => [
+      `${r("grams")}/1000*${r("pricePerKg")}`,
+      `${r("grams")}/1000*${r("additivePercent")}/100*${r("additivePerKg")}`,
+    ],
     materialsHint: "Jar, wick, mould wear, label…",
     defaults: {
       materials: [
@@ -369,6 +399,11 @@ export const builders: QuoteBuilder[] = [
       { label: "Food", amount: f(x, "foodPerPlate") },
       { label: "Disposables", amount: f(x, "disposablesPerPlate") },
       { label: "Serving staff", amount: f(x, "staffPerPlate") },
+    ],
+    baseFormulas: (r) => [
+      r("foodPerPlate"),
+      r("disposablesPerPlate"),
+      r("staffPerPlate"),
     ],
     materialsHint: "Extras per plate, e.g. welcome drink, dessert.",
     defaults: {
@@ -434,6 +469,12 @@ export const builders: QuoteBuilder[] = [
       { label: "Binding", amount: f(x, "binding") },
       { label: "Lamination", amount: f(x, "lamination") },
     ],
+    baseFormulas: (r) => [
+      `${r("bwPages")}*${r("bwRate")}`,
+      `${r("colourPages")}*${r("colourRate")}`,
+      r("binding"),
+      r("lamination"),
+    ],
     materialsHint: "Covers, special paper, envelopes…",
     defaults: {
       materials: [],
@@ -491,6 +532,10 @@ export const builders: QuoteBuilder[] = [
           f(x, "paintPerLitre"),
       },
       { label: "Labour", amount: f(x, "labourDays") * f(x, "dayRate") },
+    ],
+    baseFormulas: (r) => [
+      `IFERROR(${r("area")}*${r("coats")}/${r("coverage")},0)*${r("paintPerLitre")}`,
+      `${r("labourDays")}*${r("dayRate")}`,
     ],
     materialsHint: "Primer, putty, tape, sandpaper…",
     defaults: {

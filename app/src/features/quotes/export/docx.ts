@@ -1,4 +1,5 @@
 import type { ExportDoc, Row } from "./document";
+import { markdownToDocx } from "./markdown-docx";
 import type { ExportTemplate } from "./templates";
 
 const hex = (color: string) => color.replace("#", "");
@@ -7,6 +8,7 @@ export async function renderDocx(
   doc: ExportDoc,
   t: ExportTemplate,
 ): Promise<Uint8Array> {
+  const docx = await import("docx");
   const {
     AlignmentType,
     BorderStyle,
@@ -19,7 +21,7 @@ export async function renderDocx(
     TableRow,
     TextRun,
     WidthType,
-  } = await import("docx");
+  } = docx;
 
   const none = { style: BorderStyle.NONE, size: 0, color: "FFFFFF" };
   const line = { style: BorderStyle.SINGLE, size: 4, color: hex(t.border) };
@@ -215,13 +217,11 @@ export async function renderDocx(
   }
   if (doc.notes) {
     children.push(heading("Notes"));
-    for (const para of doc.notes.split("\n")) {
-      children.push(
-        new Paragraph({
-          children: [new TextRun({ text: para, size: 20, color: hex(t.text) })],
-        }),
-      );
-    }
+    children.push(...markdownToDocx(doc.notes, docx, t));
+  }
+  for (const sec of doc.sections) {
+    children.push(heading(sec.title || "Additional notes"));
+    children.push(...markdownToDocx(sec.body, docx, t));
   }
   children.push(
     new Paragraph({

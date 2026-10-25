@@ -1,4 +1,5 @@
 import type { ExportDoc, Row } from "./document";
+import { demoteHeadings } from "./markdown-render";
 
 /** Escape characters that would otherwise be parsed as markdown or break a table cell. */
 const esc = (text: string) =>
@@ -61,9 +62,15 @@ export function quoteToMarkdown(doc: ExportDoc, standalone = true): string {
     out.push(`## ${esc(doc.builderName)} inputs`);
     out.push(rowsTable(["Parameter", "Value"], doc.inputs));
   }
+  // Notes and extra sections are user-written markdown, so they're kept as-is (headings are
+  // demoted to nest under the section title).
   if (doc.notes) {
     out.push("## Notes");
-    out.push(doc.notes.split("\n").map(esc).join("  \n"));
+    out.push(demoteHeadings(doc.notes));
+  }
+  for (const sec of doc.sections) {
+    out.push(`## ${esc(sec.title || "Additional notes")}`);
+    out.push(demoteHeadings(sec.body));
   }
   if (standalone) {
     out.push("---");

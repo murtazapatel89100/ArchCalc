@@ -294,6 +294,9 @@ export function QuoteWorkspace(props: { builder: QuoteBuilder }) {
                       onTemplateChange={(templateId) =>
                         updateSettings({ templateId })
                       }
+                      onKindChange={(exportKind) =>
+                        updateSettings({ exportKind })
+                      }
                     />
                   )}
                 </Show>

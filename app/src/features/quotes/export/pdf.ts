@@ -1,4 +1,3 @@
-import { marked } from "marked";
 import type {
   Content,
   CustomTableLayout,
@@ -6,17 +5,11 @@ import type {
 } from "pdfmake/interfaces";
 import type { ExportDoc } from "./document";
 import { quoteToMarkdown } from "./markdown";
+import { markdownToHtml } from "./markdown-render";
 import type { ExportTemplate } from "./templates";
 
 const PAGE_WIDTH = 595.28; // A4 in points
 const BAND_HEIGHT = 96;
-
-/** marked emits `align="right"` on table cells; html-to-pdfmake only understands inline styles. */
-export const markdownToHtml = (md: string) =>
-  (marked.parse(md, { async: false }) as string).replace(
-    / align="(left|right|center)"/g,
-    ' style="text-align:$1"',
-  );
 
 const tableLayout = (t: ExportTemplate): CustomTableLayout => ({
   fillColor: (row) => (row > 0 && row % 2 === 0 ? t.stripe : null),
@@ -62,7 +55,10 @@ export async function renderPdf(
   const vfs = (vfsModule as any).default ?? vfsModule;
   pdfMake.addVirtualFileSystem(vfs);
 
-  const html = markdownToHtml(quoteToMarkdown(doc, false));
+  // html-to-pdfmake turns whitespace inside <blockquote> into blank lines; trim it.
+  const html = markdownToHtml(quoteToMarkdown(doc, false))
+    .replace(/<blockquote>\s+/g, "<blockquote>")
+    .replace(/\s+<\/blockquote>/g, "</blockquote>");
   const content = htmlToPdfmake(html, {
     window,
     removeExtraBlanks: true,
@@ -76,8 +72,49 @@ export async function renderPdf(
       },
       p: { margin: [0, 2, 0, 6] },
       th: { bold: true, fillColor: t.accent, color: t.accentText },
+      h3: {
+        fontSize: 11.5,
+        bold: true,
+        color: t.text,
+        marginTop: 8,
+        marginBottom: 4,
+      },
+      h4: {
+        fontSize: 10.5,
+        bold: true,
+        color: t.text,
+        marginTop: 6,
+        marginBottom: 3,
+      },
+      h5: {
+        fontSize: 10,
+        bold: true,
+        color: t.muted,
+        marginTop: 6,
+        marginBottom: 3,
+      },
+      h6: {
+        fontSize: 10,
+        bold: true,
+        color: t.muted,
+        marginTop: 6,
+        marginBottom: 3,
+      },
       strong: { bold: true },
       em: { italics: true, color: t.muted },
+      ul: { marginBottom: 6, marginLeft: 4 },
+      ol: { marginBottom: 6, marginLeft: 4 },
+      li: { marginBottom: 2 },
+      a: { color: t.accent, decoration: "underline" },
+      code: { background: t.stripe, color: t.text },
+      pre: { background: t.stripe, margin: [0, 4, 0, 8] },
+      blockquote: {
+        color: t.muted,
+        italics: true,
+        marginLeft: 10,
+        marginTop: 0,
+        marginBottom: 6,
+      },
     },
   }) as Content;
   styleTables(content, t);

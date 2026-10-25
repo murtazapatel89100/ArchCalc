@@ -14,6 +14,7 @@ export const defaultQuoteSettings: QuoteSettings = {
   currency: "INR",
   templateId: "classic",
   defaultTaxPercent: 0,
+  exportKind: "document",
 };
 
 const readProducts = (): Product[] => {
@@ -135,6 +136,10 @@ export const quoteActions = {
       JSON.parse(JSON.stringify(source.inputs)),
     );
     copy.notes = source.notes;
+    copy.sections = (source.sections ?? []).map((sec) => ({
+      ...sec,
+      id: uuidv4(),
+    }));
     store.setProducts(i, "quotes", (qs) => [...qs, copy]);
     return copy;
   },

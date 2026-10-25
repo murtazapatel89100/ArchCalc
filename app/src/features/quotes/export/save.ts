@@ -1,6 +1,6 @@
 import { invoke, isTauri } from "@tauri-apps/api/core";
 
-export type ExportFormat = "pdf" | "docx" | "md";
+export type ExportFormat = "pdf" | "docx" | "md" | "xlsx" | "csv";
 
 const formatInfo: Record<ExportFormat, { name: string; mime: string }> = {
   pdf: { name: "PDF document", mime: "application/pdf" },
@@ -9,6 +9,11 @@ const formatInfo: Record<ExportFormat, { name: string; mime: string }> = {
     mime: "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
   },
   md: { name: "Markdown", mime: "text/markdown" },
+  xlsx: {
+    name: "Excel workbook",
+    mime: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+  },
+  csv: { name: "CSV", mime: "text/csv" },
 };
 
 /**

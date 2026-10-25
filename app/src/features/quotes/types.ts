@@ -33,11 +33,21 @@ export interface QuoteInputs {
   rounding: RoundingMode;
 }
 
+/** An extra titled block of markdown on a quote, e.g. terms or payment details. */
+export interface NoteSection {
+  id: string;
+  title: string;
+  body: string;
+}
+
 export interface Quote {
   id: string;
   label: string;
   inputs: QuoteInputs;
+  /** Markdown, shown under "Notes" on the exported quote. */
   notes: string;
+  /** Extra markdown sections. Optional: quotes saved before sections existed don't have it. */
+  sections?: NoteSection[];
   createdAt: number;
   updatedAt: number;
 }
@@ -65,6 +75,7 @@ export interface QuoteResult {
   overheadsCost: number;
   costPerUnit: number;
   profitPerUnit: number;
+  priceBeforeRounding: number;
   pricePerUnit: number;
   markupPercent: number;
   marginPercent: number;
@@ -85,4 +96,8 @@ export interface QuoteSettings {
   currency: string;
   templateId: string;
   defaultTaxPercent: number;
+  /** Last export kind chosen in the export window. */
+  exportKind: ExportKind;
 }
+
+export type ExportKind = "document" | "spreadsheet";

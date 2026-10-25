@@ -3,7 +3,7 @@ use std::fs;
 use std::path::Path;
 
 /// File types the Quote Studio is allowed to write.
-const ALLOWED_EXTENSIONS: [&str; 3] = ["pdf", "docx", "md"];
+const ALLOWED_EXTENSIONS: [&str; 5] = ["pdf", "docx", "md", "xlsx", "csv"];
 
 /// Write an exported document to a path the user picked in the save dialog.
 pub fn write_export(path: &Path, contents: &[u8]) -> Result<(), ExportError> {
@@ -43,6 +43,16 @@ mod tests {
         write_export(&path, b"# Quote").expect("write should succeed");
         assert_eq!(fs::read(&path).expect("file should exist"), b"# Quote");
         fs::remove_file(path).expect("cleanup");
+    }
+
+    #[test]
+    fn writes_spreadsheets() {
+        for ext in ["xlsx", "csv"] {
+            let path =
+                std::env::temp_dir().join(format!("archcalc-{}.{}", uuid::Uuid::new_v4(), ext));
+            write_export(&path, b"a,b").expect("spreadsheet export should be allowed");
+            fs::remove_file(path).expect("cleanup");
+        }
     }
 
     #[test]

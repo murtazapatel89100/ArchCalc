@@ -136,6 +136,7 @@ export function computeQuote(
     overheadsCost,
     costPerUnit,
     profitPerUnit,
+    priceBeforeRounding: rawPrice,
     pricePerUnit,
     markupPercent: safeDiv(profitPerUnit, costPerUnit) * 100,
     marginPercent: safeDiv(profitPerUnit, pricePerUnit) * 100,

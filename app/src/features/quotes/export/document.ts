@@ -22,7 +22,10 @@ export interface ExportDoc {
   totals: Row[];
   breakdown?: Row[];
   inputs?: Row[];
+  /** Markdown. */
   notes: string;
+  /** Extra markdown sections, in order. */
+  sections: { title: string; body: string }[];
 }
 
 export interface ExportOptions {
@@ -74,6 +77,9 @@ export function buildExportDoc(
     },
     totals,
     notes: quote.notes.trim(),
+    sections: (quote.sections ?? [])
+      .map((sec) => ({ title: sec.title.trim(), body: sec.body.trim() }))
+      .filter((sec) => sec.body),
   };
 
   if (options.includeBreakdown) {
