@@ -62,6 +62,14 @@ You can also set the **order quantity**, a **discount** (% or fixed), **tax / GS
 
 ArchCalc warns you when the price is below cost or the margin is 100% or more.
 
+### Notes & terms
+
+The **Notes & terms** card takes [Markdown](https://commonmark.org/help/), so you can write **bold**, _italic_, lists, quotes, links and even tables. Use **Write / Preview** to check how it will look.
+
+Need more than one block? Add extra sections with the **Terms**, **Payment** or **Delivery** presets (each comes with editable starter text), or **Custom** for anything else, such as a warranty. Every section appears on the exported quote under its own heading, in order. Duplicating a quote copies its notes and sections too.
+
+![Notes & terms card with Markdown notes in preview mode and a Terms & conditions section](/images/screens/quote-notes.png)
+
 ## Products and saved quotes
 
 Quotes are grouped under **products**. A product can hold several quotes — for example *PLA Basic*, *PETG* and *Silk PLA* for the same keychain — and you can duplicate, rename or delete them. The **Compare** tab lines all quotes up side by side and highlights the cheapest cost and highest margin.
@@ -72,15 +80,29 @@ Everything is saved on your device automatically and included in **Settings → 
 
 ## Exporting
 
-Click **Export quote** to open the export window:
+Click **Export quote** to open the export window, then use the **Document / Spreadsheet** toggle at the top. ArchCalc remembers your choice.
+
+### Document: PDF, Word or Markdown
 
 1. Pick a template — **Classic Navy**, **Minimal Mono**, **Emerald**, **Sunset** or **Midnight**. The preview updates instantly.
-2. Choose whether to **include the cost breakdown**. Turn it off for a customer-facing quote that shows only the price, discount, tax and total.
+2. Choose whether to **include the cost breakdown**. Turn it off for a customer-facing quote that shows only the price, discount, tax, total and your notes.
 3. Export as **PDF**, **Word (.docx)** or **Markdown**, and choose where to save it.
 
 ![Export window with the Sunset template selected and a live preview of the quotation](/images/screens/quote-export.png)
 
-The quote is first written as Markdown, then rendered to a styled PDF, so all three formats contain the same content.
+The quote is first written as Markdown, then rendered to a styled PDF, so all three formats contain the same content — including your notes and extra sections, fully formatted.
+
+### Spreadsheet: Excel or CSV
+
+The **Excel (.xlsx)** export is a live costing sheet in your template's colours:
+
+- **Highlighted cells are inputs** — order quantity, profit, discount, tax, every builder input, material quantities and costs, and overhead values.
+- **Everything else is a formula.** Change an input in Excel, Google Sheets, Numbers or LibreOffice and the base cost, materials, overheads, price, margin, tax and order total all recalculate, using the same maths as the app.
+- Notes and extra sections go on a second **Notes** sheet.
+
+**CSV** contains the same rows as plain values, for importing into other tools.
+
+![Export window in Spreadsheet mode, previewing the sheet with highlighted input cells and formula cells](/images/screens/quote-spreadsheet.png)
 
 ### Quote settings
 
