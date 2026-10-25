@@ -12,6 +12,8 @@ const DATA_KEYS = [
   "archcalc_workspace_title",
   "archcalc_workspace_subtitle",
   "archcalc_workspace_image",
+  "archcalc_workspaces",
+  "archcalc_recent_conversions",
   QUOTES_KEY,
   QUOTE_SETTINGS_KEY,
 ];
