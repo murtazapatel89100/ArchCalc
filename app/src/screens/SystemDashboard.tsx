@@ -8,8 +8,8 @@ import {
   Info,
   Wifi,
 } from "lucide-solid";
-import { SolidApexCharts } from "solid-apexcharts";
 import { createSignal, onCleanup, onMount, Show } from "solid-js";
+import { AreaSparkline } from "../components/AreaSparkline";
 
 interface SystemInfo {
   cpu_usage: number;
@@ -57,39 +57,6 @@ export function SystemDashboard() {
     fetchInfo();
     const interval = setInterval(fetchInfo, 1000);
     onCleanup(() => clearInterval(interval));
-  });
-
-  const getChartOptions = (color: string) => ({
-    chart: {
-      type: "area" as const,
-      toolbar: { show: false },
-      sparkline: { enabled: true },
-      animations: { enabled: false },
-    },
-    colors: [color],
-    stroke: {
-      curve: "smooth" as const,
-      width: 2,
-    },
-    fill: {
-      type: "gradient",
-      gradient: {
-        shadeIntensity: 1,
-        opacityFrom: 0.4,
-        opacityTo: 0,
-        stops: [0, 100],
-      },
-    },
-    tooltip: {
-      fixed: { enabled: false },
-      x: { show: false },
-      y: {
-        title: {
-          formatter: () => "",
-        },
-      },
-      marker: { show: false },
-    },
   });
 
   const formatBytes = (bytes: number) => {
@@ -147,13 +114,7 @@ export function SystemDashboard() {
                   </span>
                 </div>
                 <div class="h-24 w-full">
-                  <SolidApexCharts
-                    type="area"
-                    options={getChartOptions("#4F8CFF")}
-                    series={[{ data: cpuData() }]}
-                    width="100%"
-                    height="100%"
-                  />
+                  <AreaSparkline color="#4F8CFF" data={cpuData()} />
                 </div>
                 <div class="flex justify-between text-xs text-[var(--color-app-text-secondary)] font-mono">
                   <span>Cores: {info().cpu_cores}</span>
@@ -177,13 +138,7 @@ export function SystemDashboard() {
                   </span>
                 </div>
                 <div class="h-24 w-full">
-                  <SolidApexCharts
-                    type="area"
-                    options={getChartOptions("#F59E0B")}
-                    series={[{ data: ramData() }]}
-                    width="100%"
-                    height="100%"
-                  />
+                  <AreaSparkline color="#F59E0B" data={ramData()} />
                 </div>
                 <div class="flex justify-between text-xs text-[var(--color-app-text-secondary)] font-mono">
                   <span>Total: {formatBytes(info().ram_total)}</span>
@@ -210,13 +165,7 @@ export function SystemDashboard() {
                   </div>
                 </div>
                 <div class="h-24 w-full">
-                  <SolidApexCharts
-                    type="area"
-                    options={getChartOptions("#22C55E")}
-                    series={[{ data: networkData() }]}
-                    width="100%"
-                    height="100%"
-                  />
+                  <AreaSparkline color="#22C55E" data={networkData()} />
                 </div>
                 <div class="flex justify-between text-xs text-[var(--color-app-text-secondary)] font-mono">
                   <span>All Interfaces</span>

@@ -1,8 +1,20 @@
 import { Database, Info, Keyboard, Settings2 } from "lucide-solid";
 import { createSignal, For, type JSX, Show } from "solid-js";
 import { Dynamic } from "solid-js/web";
+import { QUOTE_SETTINGS_KEY, QUOTES_KEY } from "../features/quotes/store";
 import { cn } from "../utils/cn";
 import { createLocalStorage } from "../utils/createLocalStorage";
+
+/** Every localStorage key included in data export, import and "clear all data". */
+const DATA_KEYS = [
+  "archcalc_history",
+  "archcalc_history_retention",
+  "archcalc_workspace_title",
+  "archcalc_workspace_subtitle",
+  "archcalc_workspace_image",
+  QUOTES_KEY,
+  QUOTE_SETTINGS_KEY,
+];
 
 const categories = [
   { id: "general", name: "General", icon: Settings2 },
@@ -33,21 +45,9 @@ export function SettingsScreen() {
 
   const handleExport = () => {
     try {
-      const data = {
-        archcalc_history: localStorage.getItem("archcalc_history"),
-        archcalc_history_retention: localStorage.getItem(
-          "archcalc_history_retention",
-        ),
-        archcalc_workspace_title: localStorage.getItem(
-          "archcalc_workspace_title",
-        ),
-        archcalc_workspace_subtitle: localStorage.getItem(
-          "archcalc_workspace_subtitle",
-        ),
-        archcalc_workspace_image: localStorage.getItem(
-          "archcalc_workspace_image",
-        ),
-      };
+      const data = Object.fromEntries(
+        DATA_KEYS.map((key) => [key, localStorage.getItem(key)]),
+      );
       const blob = new Blob([JSON.stringify(data, null, 2)], {
         type: "application/json",
       });
@@ -98,14 +98,7 @@ export function SettingsScreen() {
     if (
       confirm("Are you sure you want to clear all data? This cannot be undone.")
     ) {
-      const keys = [
-        "archcalc_history",
-        "archcalc_history_retention",
-        "archcalc_workspace_title",
-        "archcalc_workspace_subtitle",
-        "archcalc_workspace_image",
-      ];
-      keys.forEach((key) => {
+      DATA_KEYS.forEach((key) => {
         localStorage.removeItem(key);
       });
       window.dispatchEvent(new Event("local-storage"));

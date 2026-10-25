@@ -62,14 +62,15 @@ export default function RootLayout({
   return (
     <html
       lang="en"
-      // ArchCalc is dark-only. Hardcoding `dark` ensures Fumadocs' class-based
-      // color palette is correct at SSR (no flash), while `suppressHydrationWarning`
-      // silences the expected next-themes `color-scheme`/class injection mismatch.
-      className={`${geistSans.variable} ${geistMono.variable} dark h-full antialiased`}
+      // next-themes sets the `dark`/`light` class before first paint; `suppressHydrationWarning`
+      // silences the expected class/`color-scheme` mismatch it causes on <html>.
+      className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
       suppressHydrationWarning
     >
-      <body className="min-h-full flex flex-col selection:bg-blue-500/30 selection:text-blue-200">
-        <RootProvider theme={{ forcedTheme: "dark" }}>{children}</RootProvider>
+      <body className="min-h-full flex flex-col selection:bg-blue-500/30 selection:text-blue-900 dark:selection:text-blue-200">
+        <RootProvider theme={{ defaultTheme: "dark", enableSystem: true }}>
+          {children}
+        </RootProvider>
         <Analytics />
       </body>
     </html>

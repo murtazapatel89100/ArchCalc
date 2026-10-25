@@ -7,6 +7,7 @@ import {
   Hash,
   History,
   Menu,
+  Receipt,
   Settings,
   Wrench,
 } from "lucide-solid";
@@ -22,6 +23,7 @@ const navItems = [
   { icon: Briefcase, label: "Workspaces", path: "/workspaces" },
   { icon: ArrowRightLeft, label: "Converters", path: "/converter" },
   { icon: Wrench, label: "Developer Tools", path: "/devtools" },
+  { icon: Receipt, label: "Quote Studio", path: "/quotes" },
   { icon: Activity, label: "System", path: "/system" },
   { icon: Settings, label: "Settings", path: "/settings" },
 ];

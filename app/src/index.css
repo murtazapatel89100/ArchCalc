@@ -41,3 +41,158 @@
 ::-webkit-scrollbar-thumb:hover {
 	background: var(--color-app-text-secondary);
 }
+
+/* Quote Studio export preview — mirrors the PDF templates */
+.quote-preview {
+	color: var(--qp-text);
+	font-size: 12px;
+	line-height: 1.45;
+	color-scheme: light;
+}
+.quote-preview .qp-band {
+	display: flex;
+	justify-content: space-between;
+	gap: 16px;
+	padding: 22px 28px;
+	background: var(--qp-band);
+	color: var(--qp-band-text);
+	border-bottom: 2px solid var(--qp-accent);
+}
+.quote-preview .qp-business {
+	font-size: 20px;
+	font-weight: 700;
+}
+.quote-preview .qp-contact {
+	font-size: 10px;
+	opacity: 0.85;
+	margin-top: 2px;
+}
+.quote-preview .qp-label {
+	font-size: 10px;
+	font-weight: 700;
+	letter-spacing: 0.2em;
+}
+.quote-preview .qp-body {
+	padding: 20px 28px 8px;
+}
+.quote-preview .qp-body h2 {
+	color: var(--qp-accent);
+	font-size: 14px;
+	font-weight: 700;
+	margin: 16px 0 6px;
+}
+.quote-preview .qp-body p {
+	margin: 4px 0 8px;
+}
+.quote-preview .qp-body table {
+	width: 100%;
+	border-collapse: collapse;
+	margin-bottom: 8px;
+}
+.quote-preview .qp-body th {
+	background: var(--qp-accent);
+	color: var(--qp-accent-text);
+	font-weight: 600;
+	padding: 5px 8px;
+}
+.quote-preview .qp-body td {
+	padding: 5px 8px;
+	border-bottom: 1px solid var(--qp-border);
+}
+.quote-preview .qp-body tbody tr:nth-child(even) td {
+	background: var(--qp-stripe);
+}
+.quote-preview .qp-footer {
+	padding: 12px 28px 20px;
+	font-size: 9px;
+	color: var(--qp-muted);
+}
+
+/* Rendered markdown (quote notes preview + export preview) */
+.md-preview,
+.quote-preview .qp-body {
+	overflow-wrap: anywhere;
+}
+.md-preview {
+	font-size: 13px;
+	line-height: 1.55;
+	color: var(--color-app-text-primary);
+}
+.md-preview > :first-child {
+	margin-top: 0;
+}
+.md-preview p,
+.md-preview ul,
+.md-preview ol,
+.md-preview blockquote,
+.md-preview pre,
+.md-preview table {
+	margin: 0 0 8px;
+}
+.md-preview h1,
+.md-preview h2,
+.md-preview h3,
+.md-preview h4 {
+	font-weight: 650;
+	margin: 10px 0 4px;
+}
+.md-preview a,
+.quote-preview .qp-body a {
+	color: var(--color-app-accent);
+	text-decoration: underline;
+}
+.quote-preview .qp-body a {
+	color: var(--qp-accent);
+}
+.md-preview ul,
+.quote-preview .qp-body ul {
+	list-style: disc;
+	padding-left: 20px;
+}
+.md-preview ol,
+.quote-preview .qp-body ol {
+	list-style: decimal;
+	padding-left: 20px;
+}
+.md-preview blockquote {
+	border-left: 3px solid var(--color-app-border);
+	padding-left: 10px;
+	color: var(--color-app-text-secondary);
+}
+.quote-preview .qp-body blockquote {
+	border-left: 3px solid var(--qp-border);
+	padding-left: 10px;
+	color: var(--qp-muted);
+	font-style: italic;
+	margin: 0 0 8px;
+}
+.md-preview code {
+	font-family: ui-monospace, monospace;
+	font-size: 12px;
+	background: var(--color-app-surface-secondary);
+	padding: 1px 5px;
+	border-radius: 4px;
+}
+.quote-preview .qp-body code {
+	font-family: ui-monospace, monospace;
+	background: var(--qp-stripe);
+	padding: 1px 4px;
+	border-radius: 3px;
+}
+.md-preview table {
+	border-collapse: collapse;
+}
+.md-preview th,
+.md-preview td {
+	border: 1px solid var(--color-app-border);
+	padding: 4px 8px;
+}
+.quote-preview .qp-body h3,
+.quote-preview .qp-body h4 {
+	font-weight: 700;
+	margin: 10px 0 4px;
+}
+.quote-preview .qp-body ul,
+.quote-preview .qp-body ol {
+	margin: 0 0 8px;
+}

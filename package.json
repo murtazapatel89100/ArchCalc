@@ -1,6 +1,6 @@
 {
   "name": "archcalc-monorepo",
   "private": true,
-  "packageManager": "pnpm@11.9.0",
+  "packageManager": "pnpm@11.21.0",
   "version": "1.2.0"
 }

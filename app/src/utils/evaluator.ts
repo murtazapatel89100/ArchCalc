@@ -84,7 +84,9 @@ export const evaluator = {
     if (percentMatch) {
       const pct = parseFloat(percentMatch[1]);
       const base = parseFloat(percentMatch[2]);
-      return { value: ((pct / 100) * base).toString(), type: "calc" };
+      // Round away floating-point noise (18% of 4999 → 899.82, not 899.8199999999999).
+      const value = Number.parseFloat(((pct / 100) * base).toPrecision(12));
+      return { value: value.toString(), type: "calc" };
     }
 
     // 7. Math Parsing

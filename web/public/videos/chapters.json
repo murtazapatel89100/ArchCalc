@@ -1,0 +1,47 @@
+[
+  {
+    "name": "dashboard",
+    "start": 0.01,
+    "end": 13.93
+  },
+  {
+    "name": "calculator",
+    "start": 13.93,
+    "end": 27.46
+  },
+  {
+    "name": "history",
+    "start": 27.46,
+    "end": 32.8
+  },
+  {
+    "name": "workspaces",
+    "start": 32.8,
+    "end": 43.16
+  },
+  {
+    "name": "converters",
+    "start": 43.16,
+    "end": 52.32
+  },
+  {
+    "name": "devtools",
+    "start": 52.32,
+    "end": 63.72
+  },
+  {
+    "name": "system",
+    "start": 63.72,
+    "end": 69.13
+  },
+  {
+    "name": "quote-studio",
+    "start": 69.13,
+    "end": 117.53
+  },
+  {
+    "name": "settings",
+    "start": 117.53,
+    "end": 122.89
+  }
+]
