@@ -285,6 +285,9 @@ function encodeFrames(frames, endTime, startTime, outFile) {
 // The tour
 // ---------------------------------------------------------------------------------------------
 
+/** Clicks and caption changes, used to sync sound effects in the LinkedIn cut. */
+const events = [];
+
 async function tour(page, marks) {
   const pace = cfg.pace;
   const wait = (ms) => page.waitForTimeout(ms * pace);
@@ -295,10 +298,11 @@ async function tour(page, marks) {
     marks.push({ name, start, end: now() });
   };
   // Captions are for the LinkedIn cut; the docs pages explain each clip in text instead.
-  const caption = (title, sub, badge) =>
-    mode === "linkedin"
-      ? page.evaluate(([t, s, b]) => window.__sc.caption(t, s, b), [title, sub, badge])
-      : Promise.resolve();
+  const caption = (title, sub, badge) => {
+    if (mode !== "linkedin") return Promise.resolve();
+    if (title) events.push({ type: "caption", t: Date.now() / 1000 });
+    return page.evaluate(([t, s, b]) => window.__sc.caption(t, s, b), [title, sub, badge]);
+  };
   /** Docs mode: save a clean screenshot (no cursor or caption) for the documentation pages. */
   const shot = async (name) => {
     if (mode !== "docs") return;
@@ -320,6 +324,7 @@ async function tour(page, marks) {
   };
   const click = async (locator, after = 350) => {
     await moveTo(locator);
+    events.push({ type: "click", t: Date.now() / 1000 });
     await page.mouse.down();
     await page.mouse.up();
     await wait(after);
@@ -574,6 +579,8 @@ const recorder = await startRecorder(page, frameDir);
 await page.waitForTimeout(300);
 const startTime = Date.now() / 1000;
 const marks = [];
+let appStart = startTime;
+let appEnd = startTime;
 
 const card = (html, ms) =>
   page.evaluate(([h]) => window.__sc.card(h), [html]).then(() => page.waitForTimeout(ms));
@@ -585,12 +592,14 @@ if (mode === "linkedin") {
      <div class="chips"><span>🦀 Rust</span><span>⚡ Tauri</span><span>◆ SolidJS</span></div>`,
     3600,
   );
+  appStart = Date.now() / 1000;
   await card(null, 700);
 }
 
 await tour(page, marks);
 
 if (mode === "linkedin") {
+  appEnd = Date.now() / 1000;
   await card(
     `<div class="logo">Λ</div><h1>ArchCalc</h1>
      <p>Open source · Linux & Windows<br/>github.com/murtazapatel89100/ArchCalc</p>`,
@@ -607,7 +616,31 @@ console.log(`captured ${recorder.frames.length} frames over ${(endTime - startTi
 if (mode === "linkedin") {
   const out = path.resolve(process.argv[3] ?? path.join(os.homedir(), "Downloads", "archcalc-linkedin-showcase.mp4"));
   fs.mkdirSync(path.dirname(out), { recursive: true });
-  encodeFrames(recorder.frames, endTime, startTime, out);
+  const silent = path.join(frameDir, "silent.mp4");
+  encodeFrames(recorder.frames, endTime, startTime, silent);
+
+  // Original synthesized soundtrack, synced to clicks and captions.
+  const rel = (t) => Number((t - startTime).toFixed(3));
+  const eventsFile = path.join(frameDir, "events.json");
+  fs.writeFileSync(
+    eventsFile,
+    JSON.stringify({
+      duration: rel(endTime),
+      appStart: rel(appStart),
+      appEnd: rel(appEnd),
+      events: events.map((e) => ({ type: e.type, t: rel(e.t) })),
+    }),
+  );
+  const wav = path.join(frameDir, "soundtrack.wav");
+  execFileSync("python3", [path.join(appDir, "scripts", "showcase-audio.py"), eventsFile, wav], {
+    stdio: "inherit",
+  });
+  ffmpeg(
+    "-i", silent, "-i", wav,
+    "-af", "aecho=0.8:0.6:70|140:0.16|0.08,loudnorm=I=-16:TP=-1.5:LRA=11",
+    "-c:v", "copy", "-c:a", "aac", "-b:a", "192k", "-ar", "48000", "-shortest",
+    "-movflags", "+faststart", out,
+  );
   console.log(`wrote ${out}`);
 } else {
   const videoDir = path.join(repoDir, "web", "public", "videos");
