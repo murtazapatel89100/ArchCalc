@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.4.0](https://github.com/murtazapatel89100/ArchCalc/compare/archcalc-v1.3.0...archcalc-v1.4.0) (2026-10-25)
+
+
+### Features
+
+* dynamic cost rows, product/quote navigation and docs sync ([#18](https://github.com/murtazapatel89100/ArchCalc/issues/18)) ([4d2a45d](https://github.com/murtazapatel89100/ArchCalc/commit/4d2a45d79ec3a2be4b561b7a2f575249d931c388))
+
 ## [1.3.0](https://github.com/murtazapatel89100/ArchCalc/compare/archcalc-v1.2.0...archcalc-v1.3.0) (2026-10-25)
 
 
