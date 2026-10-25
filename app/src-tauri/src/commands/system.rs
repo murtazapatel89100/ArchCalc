@@ -62,7 +62,7 @@ pub fn get_system_info(state: State<'_, SystemState>) -> SystemInfo {
 
     let mut net_rx = 0;
     let mut net_tx = 0;
-    for (_, data) in networks.iter() {
+    for data in networks.values() {
         net_rx += data.received();
         net_tx += data.transmitted();
     }
