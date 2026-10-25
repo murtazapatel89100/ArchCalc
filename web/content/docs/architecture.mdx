@@ -1,30 +1,32 @@
 ---
 title: Architecture
-description: How ArchCalc separates a high-performance Rust backend from a reactive SolidJS frontend.
+description: How ArchCalc splits work between a Rust backend and a reactive SolidJS frontend.
 ---
 
-ArchCalc follows a clean separation of concerns, dividing responsibilities between a high-performance Rust backend and a reactive SolidJS frontend, connected via Tauri's IPC bridge.
-
-## Core Structure
+ArchCalc is a [Tauri 2](https://tauri.app/) desktop app. The interface is built with SolidJS and Tailwind CSS; anything that needs to be native or fast runs in Rust and is called through Tauri's IPC bridge.
 
 ```text
-Frontend (SolidJS)
-        ↓
-    Tauri IPC
-        ↓
-Backend (Rust)
+SolidJS UI  ──invoke()──▶  Rust command  ──▶  calculator engine · storage · system APIs
+     ▲                                                     │
+     └──────────────────────── result ◀────────────────────┘
 ```
 
-### Backend (Rust)
+## Rust backend
 
-- **Business Logic & Math Engine**: Evaluates expressions using a custom tokenizer, parser, and AST evaluator.
-- **File Storage**: Handles reading and writing user history securely to the local filesystem.
-- **System APIs**: Uses native desktop features where necessary via Tauri APIs.
+- **Math engine** — a custom tokenizer, parser and AST evaluator for every expression typed in the calculator, command bar and workspaces.
+- **System monitor** — CPU, memory, swap, network and OS details via `sysinfo`.
+- **File writing** — saves exported quotes to the location you pick in the native save dialog, and only as `.pdf`, `.docx`, `.md`, `.xlsx` or `.csv`.
 
-### Frontend (SolidJS)
+## SolidJS frontend
 
-- **UI & Interactions**: Delivers a fast, reactive user interface for typing equations and viewing results.
-- **State Management**: Maintains the application state efficiently.
-- **IPC Communication**: Calls Rust functions asynchronously without blocking the UI thread.
+- **Fine-grained reactivity** — results, breakdowns and previews update as you type without re-rendering whole screens.
+- **Quote Studio** — pricing, Markdown rendering, and PDF, Word and Excel generation all run locally in the app.
+- **Local data** — history, workspaces and quotes are stored on your machine. **Settings → Data** exports, imports or clears all of it.
 
-For a deeper dive into the exact file structure and module boundaries, please refer to the `ARCHITECTURE.md` file located in the core application repository.
+## Privacy
+
+ArchCalc works offline. It has no account, no telemetry and doesn't send your calculations or quotes anywhere.
+
+## Contributing
+
+The source is on [GitHub](https://github.com/murtazapatel89100/ArchCalc). For the full file layout, the list of Rust commands, where each kind of data is stored and how to add a new Quote Studio builder, see [`app/ARCHITECTURE.md`](https://github.com/murtazapatel89100/ArchCalc/blob/main/app/ARCHITECTURE.md) and the [contributing guide](https://github.com/murtazapatel89100/ArchCalc/blob/main/CONTRIBUTING.md).

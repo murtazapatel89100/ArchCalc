@@ -36,12 +36,25 @@ Download the official Windows installer (`.msi` or `.exe`) directly from the [Re
 
 ## First Steps
 
-Upon launching ArchCalc, you will be greeted by the scientific calculator interface. From here, you can:
+ArchCalc opens on the **Dashboard**, whose command bar answers almost anything you type:
 
-- Type mathematical expressions directly into the display.
-- Use the built-in keypad or your keyboard for input.
-- View real-time results as you type.
-- Access your calculation history from the side panel.
+- Maths: `(85000 - 22000) * 12`
+- Conversions: `5 km to mi`, `100 gb in mb`
+- Percentages: `18% of 4999`
+- Developer commands: `uuid`, `sha256 hello`, `base64 encode hello`, `now`
+
+Press **Enter** to save a result to your **History**. Use the sidebar to open the scientific **Calculator**, **Workspaces**, **Converters**, **Developer Tools**, **Quote Studio**, the **System** monitor and **Settings** — see the [Feature Tour](/docs/features) for a clip of each. **Ctrl + Space** brings you back to the command bar from anywhere.
+
+### Build from source
+
+Prefer to build it yourself? You'll need Node.js 20+, pnpm, Rust and the [Tauri prerequisites](https://tauri.app/start/prerequisites/):
+
+```bash
+git clone https://github.com/murtazapatel89100/ArchCalc.git
+cd ArchCalc/app
+pnpm install
+pnpm tauri build
+```
 
 ## Using the Scientific Calculator
 
