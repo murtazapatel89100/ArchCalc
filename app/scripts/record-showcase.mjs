@@ -439,11 +439,31 @@ async function tour(page, marks) {
     await shot("quote-compare");
     await click(page.getByRole("button", { name: "PLA Basic" }).first(), 700);
 
+    await click(page.getByLabel("Notes", { exact: true }));
+    await type(
+      "Printed in **matte PLA** with a _gift box_.\n- Sanded supports\n- Custom colours on request",
+      26,
+    );
+    await wait(500);
+    await click(page.getByRole("button", { name: "Terms", exact: true }), 700);
+    await click(page.getByRole("button", { name: "Preview" }).first(), 600);
+    await page
+      .locator("section", { hasText: "Notes & terms" })
+      .evaluate((el) => el.scrollIntoView({ behavior: "smooth", block: "start" }));
+    await wait(1400);
+    await shot("quote-notes");
+
     await click(page.getByRole("button", { name: "Export quote" }), 1200);
-    for (const t of ["Sunset", "Emerald", "Midnight", "Classic Navy"]) {
+    for (const t of ["Sunset", "Emerald", "Classic Navy"]) {
       await click(page.getByRole("button", { name: t }), 1000);
       if (t === "Sunset") await shot("quote-export");
     }
+    await click(page.getByRole("button", { name: "Spreadsheet" }), 1500);
+    await shot("quote-spreadsheet");
+    await moveTo(page.locator("table").last());
+    await page.mouse.wheel(0, 700);
+    await wait(1600);
+    await click(page.getByRole("button", { name: "Document" }), 600);
     await click(page.getByText("×", { exact: true }), 600);
   });
 
