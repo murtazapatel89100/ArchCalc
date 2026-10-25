@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.3.0](https://github.com/murtazapatel89100/ArchCalc/compare/archcalc-v1.2.0...archcalc-v1.3.0) (2026-10-25)
+
+
+### Features
+
+* Quote Studio, dependency updates, docs showcase & theme fix ([#16](https://github.com/murtazapatel89100/ArchCalc/issues/16)) ([d375ee0](https://github.com/murtazapatel89100/ArchCalc/commit/d375ee007cf3337b0be3cd283eda4ac5f10d8bd9))
+
 ## [1.2.0](https://github.com/murtazapatel89100/ArchCalc/compare/archcalc-v1.1.1...archcalc-v1.2.0) (2026-07-09)
 
 
