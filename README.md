@@ -33,6 +33,7 @@
   - Organise work as **products**, each with several **quotes** you can duplicate and compare.
   - Repeatable rows (spools, fabrics, surfaces, menu items), raw materials, overheads, five profit methods, discount, tax and rounding.
   - **Simple** quotes for just the core costs, or **Detailed** quotes with utilities, labour and overheads.
+  - **Client orders**: combine several quotes of a product (e.g. one per colourway) into one quote for a client, with one discount and tax for the order or each quote's own.
   - Markdown **notes & terms** sections.
   - Export branded **PDF**, **Word** or **Markdown** quotes in five templates — or a **live Excel spreadsheet** whose formulas recalculate when you change an input. CSV too.
 - **Your data stays on your machine** — no account, no telemetry. Export and import everything from Settings.

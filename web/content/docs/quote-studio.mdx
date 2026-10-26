@@ -132,6 +132,25 @@ A product can hold several quotes — for example *PLA Basic*, *PETG* and *Silk 
 
 Everything is saved on your device automatically and included in **Settings → Data** export and import.
 
+## Combining quotes for one client
+
+A client often orders the same product made in different ways — say keychains in **Black + Red**, **Blue + Black** and **Black + White**, two plates each. Make one quote per colourway under the product (**Duplicate** is the quickest way), then combine them into a single quote for the client:
+
+1. On the product's quote list, tick the quotes to include and click **Combine**.
+2. Name the order and add the **client**. Untick or tick quotes here at any time.
+3. Choose how **discount & tax** work:
+   - **One for the order** — one discount (% or fixed) and one tax rate on the combined subtotal, like a normal invoice.
+   - **Each quote's own** — every quote keeps the discount and tax it already has; the order adds them up and shows a tax line per rate.
+4. Add notes and terms for the client (each quote's own notes aren't included), then **Export quote** — or **Save as client order** to keep it.
+
+![A client order combining PLA Basic and PETG quotes for Asha Traders, with one discount and tax for the whole order](/images/screens/quote-order.png)
+
+Saved orders are listed under **Client orders** on the product page. Prices are read live from the quotes, so changing a quote's spool price or quantity updates every order it's in; deleting a quote removes it from its orders.
+
+The export has one line per quote (its quantity × price per unit) and one set of totals. With **Include cost breakdown** on, each quote gets its own breakdown section. The Excel export has a **Summary** sheet plus one live sheet per quote: change a quote's inputs on its sheet and the summary's lines and totals recalculate.
+
+![Export preview of the combined quote with one line per quote and a single total](/images/screens/quote-order-export.png)
+
 ## Exporting
 
 Click **Export quote** to open the export window, then use the **Document / Spreadsheet** toggle at the top. ArchCalc remembers your choice.
