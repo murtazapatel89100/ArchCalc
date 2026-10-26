@@ -12,12 +12,18 @@ const doc = (overrides: Partial<ExportDoc> = {}): ExportDoc => ({
   quoteLabel: "PLA",
   builderName: "3D Print Costing",
   unitLabel: "item",
-  lineItem: {
-    item: "Keychain — PLA",
-    qty: "1",
-    unitPrice: "₹10",
-    amount: "₹10",
-  },
+  details: [
+    { label: "Reference", value: "Q-1" },
+    { label: "Product", value: "Keychain" },
+  ],
+  lineItems: [
+    {
+      item: "Keychain — PLA",
+      qty: "1",
+      unitPrice: "₹10",
+      amount: "₹10",
+    },
+  ],
   totals: [{ label: "Total", value: "₹10", strong: true }],
   notes: "",
   sections: [],

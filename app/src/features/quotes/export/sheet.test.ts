@@ -29,10 +29,18 @@ vi.stubGlobal("window", {
 });
 
 const { builders } = await import("../builders");
-const { buildSheet, renderCsv } = await import("./sheet");
-const { buildExportDoc } = await import("./document");
+const { buildSheet, buildCombinedSheet, renderCsv } = await import("./sheet");
+const { buildExportDoc, buildCombinedDoc } = await import("./document");
 const { resultFor } = await import("../result");
-const { defaultInputs, defaultQuoteSettings } = await import("../store");
+const {
+  defaultInputs,
+  defaultQuoteSettings,
+  draftOrder,
+  products,
+  quoteActions,
+} = await import("../store");
+const { orderResult } = await import("../combined");
+const { quoteToMarkdown } = await import("./markdown");
 const { markdownToLines } = await import("./markdown-plain");
 const { normalizeInputs, productionFor } = await import("../groups");
 
@@ -40,8 +48,17 @@ const { normalizeInputs, productionFor } = await import("../groups");
  * Evaluate the small subset of Excel used by the sheet: cell refs, + - * / ( ),
  * IFERROR, IF, MIN, MAX, INT, CEILING and SUM over a single column range.
  */
-function evaluate(formula: string, cells: Map<string, number>): number {
+function evaluate(
+  formula: string,
+  cells: Map<string, number>,
+  sheets: Map<string, Map<string, number>> = new Map(),
+): number {
   const expr = formula
+    .replace(/'([^']+)'!([A-F]\d+)/g, (_, name, ref) => {
+      const v = sheets.get(name)?.get(ref);
+      if (v === undefined) throw new Error(`Missing '${name}'!${ref}`);
+      return `(${v})`;
+    })
     .replace(/SUM\(([A-F])(\d+):\1(\d+)\)/g, (_, col, a, b) => {
       const refs: string[] = [];
       for (let r = Number(a); r <= Number(b); r++) refs.push(`${col}${r}`);
@@ -69,7 +86,10 @@ function evaluate(formula: string, cells: Map<string, number>): number {
 }
 
 /** Recalculate every formula cell top-down, like a spreadsheet would. */
-function recalc(rows: ReturnType<typeof buildSheet>["rows"]) {
+function recalc(
+  rows: ReturnType<typeof buildSheet>["rows"],
+  sheets: Map<string, Map<string, number>> = new Map(),
+) {
   const cells = new Map<string, number>();
   const formulas: [string, string][] = [];
   for (const [i, row] of rows.entries()) {
@@ -80,7 +100,7 @@ function recalc(rows: ReturnType<typeof buildSheet>["rows"]) {
       else if (typeof cell.value === "number") cells.set(ref, cell.value);
     }
   }
-  for (const [ref, f] of formulas) cells.set(ref, evaluate(f, cells));
+  for (const [ref, f] of formulas) cells.set(ref, evaluate(f, cells, sheets));
   return cells;
 }
 
@@ -495,5 +515,197 @@ describe("simple quotes, plates and batches", () => {
       expect(resultFor(b, upgraded).total).toBeCloseTo(before, 9);
       expect(resultFor(b, upgraded).warnings).toEqual([]);
     }
+  });
+});
+
+describe("client orders", () => {
+  const print3d = () => {
+    const b = builders.find((x) => x.id === "print3d");
+    if (!b) throw new Error("print3d builder missing");
+    return b;
+  };
+  const colourways = () => {
+    const b = print3d();
+    const product = quoteActions.createProduct("Keychain", b, 18);
+    const quotes = [
+      ["Black + Red", 1200],
+      ["Blue + Black", 1500],
+      ["Black + White", 1300],
+    ] as const;
+    product.quotes.length = 0;
+    for (const [label, spoolPrice] of quotes) {
+      const inputs = defaultInputs(b, 18);
+      inputs.groups = {
+        filaments: [
+          {
+            id: label,
+            name: label,
+            values: { spoolPrice, spoolWeight: 1000, grams: 80 },
+          },
+        ],
+      };
+      inputs.fields.plates = 2;
+      inputs.quantity = 8;
+      product.quotes.push({
+        id: label,
+        label,
+        inputs,
+        notes: "",
+        createdAt: 0,
+        updatedAt: 0,
+      });
+    }
+    return product;
+  };
+
+  for (const taxMode of ["order", "each"] as const) {
+    it(`builds a live workbook for a ${taxMode}-level discount and tax`, () => {
+      const b = print3d();
+      const product = colourways();
+      // Make the quotes' own discounts and tax rates differ.
+      product.quotes[0].inputs.discount = { mode: "percent", value: 10 };
+      product.quotes[1].inputs.taxPercent = 12;
+      const order = {
+        ...draftOrder(
+          product.quotes.map((q) => q.id),
+          18,
+          "Diwali order",
+        ),
+        taxMode,
+        client: "Asha Traders",
+        discount: { mode: "fixed" as const, value: 100 },
+      };
+      const combined = orderResult(b, product, order);
+      expect(combined.lines.map((l) => l.label)).toEqual([
+        "Black + Red",
+        "Blue + Black",
+        "Black + White",
+      ]);
+      const doc = buildCombinedDoc(
+        product,
+        order,
+        combined,
+        b,
+        defaultQuoteSettings,
+        { includeBreakdown: true },
+      );
+      const model = buildCombinedSheet(
+        product,
+        order,
+        combined,
+        b,
+        defaultQuoteSettings,
+        doc,
+      );
+      expect(model.sheetName).toBe("Summary");
+      expect(model.extraSheets.map((x) => x.name)).toEqual([
+        "Black + Red",
+        "Blue + Black",
+        "Black + White",
+      ]);
+      const sheets = new Map(
+        model.extraSheets.map((x) => [x.name, recalc(x.rows)]),
+      );
+      const cells = recalc(model.rows, sheets);
+      for (const [i, row] of model.rows.entries()) {
+        for (const [c, cell] of row.cells.entries()) {
+          if (cell?.formula) {
+            expect(
+              cells.get(`${"ABCDEF"[c]}${i + 1}`),
+              `Summary ${"ABCDEF"[c]}${i + 1} =${cell.formula}`,
+            ).toBeCloseTo(cell.value as number, 6);
+          }
+        }
+      }
+      const totalRow = model.rows.findIndex((r) => r.kind === "total");
+      expect(cells.get(`F${totalRow + 1}`)).toBeCloseTo(combined.total, 6);
+    });
+  }
+
+  it("writes a real workbook with a summary and a sheet per quote", async () => {
+    const b = print3d();
+    const product = colourways();
+    const order = draftOrder(
+      product.quotes.map((q) => q.id),
+      18,
+      "Diwali order",
+    );
+    const combined = orderResult(b, product, order);
+    const doc = buildCombinedDoc(
+      product,
+      order,
+      combined,
+      b,
+      defaultQuoteSettings,
+      { includeBreakdown: true },
+    );
+    const model = buildCombinedSheet(
+      product,
+      order,
+      combined,
+      b,
+      defaultQuoteSettings,
+      doc,
+    );
+    const { renderXlsx } = await import("./sheet");
+    const { getTemplate } = await import("./templates");
+    const bytes = await renderXlsx(model, getTemplate("classic"));
+    const { default: ExcelJS } = await import("exceljs");
+    const wb = new ExcelJS.Workbook();
+    await wb.xlsx.load(bytes.buffer as ArrayBuffer);
+    expect(wb.worksheets.map((w) => w.name)).toEqual([
+      "Summary",
+      "Black + Red",
+      "Blue + Black",
+      "Black + White",
+    ]);
+    const lineRow = model.rows.findIndex((r) =>
+      String(r.cells[0]?.value).endsWith("Black + Red"),
+    );
+    const price = wb.getWorksheet("Summary")?.getCell(`C${lineRow + 1}`).value;
+    expect(price).toMatchObject({
+      formula: expect.stringMatching(/^'Black \+ Red'!F\d+$/),
+    });
+  });
+
+  it("writes one line per quote and a breakdown for each", () => {
+    const b = print3d();
+    const product = colourways();
+    const order = {
+      ...draftOrder(
+        product.quotes.map((q) => q.id),
+        18,
+        "Diwali order",
+      ),
+      client: "Asha Traders",
+    };
+    const combined = orderResult(b, product, order);
+    const md = quoteToMarkdown(
+      buildCombinedDoc(product, order, combined, b, defaultQuoteSettings, {
+        includeBreakdown: true,
+      }),
+    );
+    expect(md).toContain("| Client | Asha Traders |");
+    for (const label of ["Black + Red", "Blue + Black", "Black + White"]) {
+      expect(md).toContain(`| Keychain — ${label} | 8 |`);
+      expect(md).toContain(`## Cost breakdown — ${label} (per item)`);
+    }
+    expect(md.match(/\*\*Total\*\*/g)).toHaveLength(1);
+  });
+
+  it("drops a deleted quote from its client orders", () => {
+    const b = print3d();
+    const created = quoteActions.createProduct("Coaster", b, 0);
+    const second = quoteActions.addQuote(created.id, b, 0);
+    if (!second) throw new Error("addQuote failed");
+    const ids = [created.quotes[0].id, second.id];
+    const saved = quoteActions.saveOrder(
+      created.id,
+      draftOrder(ids, 0, "Order 1"),
+    );
+    if (!saved) throw new Error("saveOrder failed");
+    quoteActions.deleteQuote(created.id, second.id);
+    const product = products.find((p) => p.id === created.id);
+    expect(product?.orders?.[0].quoteIds).toEqual([created.quotes[0].id]);
   });
 });

@@ -75,22 +75,24 @@ Everything stays on the user's machine.
 
 ```text
 features/quotes/
-├── types.ts        # Product → Quote → QuoteInputs (fields, groups, materials, overheads, pricing)
+├── types.ts        # Product → Quote → QuoteInputs (fields, groups, materials, overheads, pricing); Product → ClientOrder
 ├── builders.ts     # The builder registry: fields, repeatable groups, cost maths + spreadsheet formulas
 ├── groups.ts       # Group rows: totals, per-row cost lines, simple vs detailed quotes, upgrading old quotes
 ├── engine.ts       # computeQuote(): materials, overheads, profit modes, rounding, discount, tax
+├── combined.ts     # combine(): several quotes → one client order (order-level or per-quote discount & tax)
 ├── result.ts       # resultFor(builder, inputs) — ties a builder's base cost to the engine
 ├── store.ts        # Products in a fine-grained Solid store, persisted to localStorage
 ├── format.ts       # Currency and number formatting
-├── components/     # QuoteWorkspace (products → quotes → editor), QuoteEditor, BreakdownPanel,
-│                   # CompareView, ExportModal, MarkdownField, QuoteSettingsModal
+├── components/     # QuoteWorkspace (products → quotes / client orders → editor), QuoteEditor,
+│                   # CombinedView, BreakdownPanel, CompareView, ExportModal, NotesCard,
+│                   # MarkdownField, QuoteSettingsModal
 └── export/
-    ├── document.ts       # ExportDoc: one formatted model shared by every document format
+    ├── document.ts       # ExportDoc: one formatted model shared by every document format (a quote or a client order)
     ├── markdown.ts       # ExportDoc → Markdown
     ├── markdown-render.ts# Markdown → HTML (raw HTML escaped, headings nested)
     ├── pdf.ts            # Markdown → HTML → pdfmake (templates, header band, footer)
     ├── docx.ts           # ExportDoc → Word (markdown-docx.ts converts notes to native Word blocks)
-    ├── sheet.ts          # Live Excel workbook (ExcelJS) and CSV
+    ├── sheet.ts          # Live Excel workbook (ExcelJS) and CSV; client orders get a Summary + one sheet per quote
     ├── templates.ts      # Colour templates
     └── save.ts           # Save dialog + save_export_file, or a browser download outside Tauri
 ```
@@ -101,6 +103,7 @@ How a price is calculated:
 2. `computeQuote()` adds raw materials and overheads, applies the profit method and rounding, then the order quantity, discount and tax.
 3. A **simple** quote (`inputs.simple`) prices only the core costs: `fieldsFor()` hides fields marked `detailed`, `extraLinesFor()` drops `detailed` base lines and `pricedInputs()` ignores overheads. The hidden values stay saved, so switching back to detailed restores them.
 4. The UI, every export and the spreadsheet read from the same result, so they always agree.
+5. A **client order** (`Product.orders`) stores only quote ids plus its own discount, tax, client and notes. `orderResult()` in `combined.ts` prices each quote with `resultFor()` and `combine()`s the lines, so orders always follow their quotes. `buildCombinedDoc()` / `buildCombinedSheet()` export it; `ExportModal` takes an `ExportSource` so quotes and orders share it.
 
 The store keeps products in a Solid `createStore` so editing one field updates only that field (inputs keep focus). Quotes from older versions are upgraded on load by `normalizeInputs()` — for example a single-spool 3D print quote becomes a one-row Filaments list with the same price.
 

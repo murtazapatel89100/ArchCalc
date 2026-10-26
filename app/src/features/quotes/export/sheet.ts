@@ -1,4 +1,5 @@
 import type { FieldKind, QuoteBuilder } from "../builders";
+import type { CombinedResult } from "../combined";
 import { num } from "../engine";
 import { currencySymbol } from "../format";
 import {
@@ -9,7 +10,13 @@ import {
   pricedInputs,
   rowCost,
 } from "../groups";
-import type { Product, Quote, QuoteResult, QuoteSettings } from "../types";
+import type {
+  ClientOrder,
+  Product,
+  Quote,
+  QuoteResult,
+  QuoteSettings,
+} from "../types";
 import type { ExportDoc } from "./document";
 import { markdownToLines } from "./markdown-plain";
 import type { ExportTemplate } from "./templates";
@@ -44,9 +51,24 @@ export interface SheetRow {
   cells: (SheetCell | null)[];
 }
 
+/** Cells of a quote sheet that other sheets refer to, e.g. "F42". */
+export interface SheetRefs {
+  quantity: string;
+  cost: string;
+  price: string;
+  subtotal: string;
+  discount: string;
+  tax: string;
+}
+
 export interface SheetModel {
   name: string;
+  /** Worksheet name of `rows` ("Quote", or "Summary" for a combined quote). */
+  sheetName: string;
   rows: SheetRow[];
+  /** Further worksheets, e.g. one per quote of a combined quote. */
+  extraSheets: { name: string; rows: SheetRow[] }[];
+  refs?: SheetRefs;
   notes: { title: string; lines: string[] }[];
   currencySymbol: string;
 }
@@ -486,20 +508,218 @@ export function buildSheet(
     format: "money",
   });
 
-  const notes = [
-    ...(doc.notes
-      ? [{ title: "Notes", lines: markdownToLines(doc.notes) }]
-      : []),
-    ...doc.sections.map((sec) => ({
-      title: sec.title || "Additional notes",
-      lines: markdownToLines(sec.body),
-    })),
-  ];
-
   return {
     name: `${product.name} — ${quote.label}`,
+    sheetName: "Quote",
     rows,
-    notes,
+    extraSheets: [],
+    refs: {
+      quantity: ref("B", qtyRow),
+      cost,
+      price,
+      subtotal: sub,
+      discount: C(discountRowOut),
+      tax: C(taxOut),
+    },
+    notes: sheetNotes(doc),
+    currencySymbol: currencySymbol(settings.currency),
+  };
+}
+
+const sheetNotes = (doc: ExportDoc) => [
+  ...(doc.notes ? [{ title: "Notes", lines: markdownToLines(doc.notes) }] : []),
+  ...doc.sections.map((sec) => ({
+    title: sec.title || "Additional notes",
+    lines: markdownToLines(sec.body),
+  })),
+];
+
+/** Excel worksheet names: at most 31 characters, none of []:*?/\ or quotes, unique. */
+function sheetNames(labels: string[], reserved: string[]): string[] {
+  const used = new Set(reserved.map((n) => n.toLowerCase()));
+  return labels.map((label, i) => {
+    const base =
+      label
+        .replace(/[[\]:*?/\\'"]/g, " ")
+        .replace(/\s+/g, " ")
+        .trim() || `Quote ${i + 1}`;
+    let name = base.slice(0, 31);
+    for (let n = 2; used.has(name.toLowerCase()); n++) {
+      const suffix = ` (${n})`;
+      name = base.slice(0, 31 - suffix.length) + suffix;
+    }
+    used.add(name.toLowerCase());
+    return name;
+  });
+}
+
+/**
+ * A client order as a workbook: one sheet per quote (the same live sheet a single quote
+ * exports) and a Summary sheet whose lines and totals refer to them, so editing any quote's
+ * inputs in Excel recalculates the order.
+ */
+export function buildCombinedSheet(
+  product: Product,
+  order: ClientOrder,
+  combined: CombinedResult,
+  builder: QuoteBuilder,
+  settings: QuoteSettings,
+  doc: ExportDoc,
+): SheetModel {
+  const names = sheetNames(
+    combined.lines.map((l) => l.label),
+    ["Summary", "Notes"],
+  );
+  const parts = combined.lines.map((l, i) => ({
+    line: l,
+    name: names[i],
+    model: buildSheet(product, l.quote, l.result, builder, settings, doc),
+  }));
+
+  const rows: SheetRow[] = [];
+  const push = (
+    kind: RowKind,
+    a: SheetCell | null = null,
+    b: SheetCell | null = null,
+    c: SheetCell | null = null,
+    amount: SheetCell | null = null,
+  ) => {
+    rows.push({ kind, cells: [a, b, c, null, null, amount] });
+    return rows.length;
+  };
+  const C = (r: number) => `${AMT}${r}`;
+  const unit = builder.unitLabel;
+  const sheetRef = (name: string, cell: string) => `'${name}'!${cell}`;
+
+  push("title", text(doc.businessName || "Quotation"));
+  push("subtitle", text(doc.contact || `${builder.name} quote`));
+  push(
+    "hint",
+    text(
+      "Each quote has its own sheet — change its yellow inputs and this summary recalculates.",
+    ),
+  );
+  push("blank");
+
+  push("section", text("Quotation"));
+  for (const d of doc.details) push("row", text(d.label), text(d.value));
+  push("blank");
+
+  let discountRow: number | undefined;
+  let taxRow: number | undefined;
+  if (order.taxMode === "order") {
+    push("section", text("Order discount & tax"));
+    discountRow = push(
+      "row",
+      text(
+        order.discount.mode === "percent" ? "Discount (%)" : "Discount (fixed)",
+      ),
+      {
+        value: order.discount.value,
+        format: order.discount.mode === "percent" ? "percent" : "money",
+        input: true,
+      },
+    );
+    taxRow = push("row", text("Tax / GST (%)"), {
+      value: order.taxPercent,
+      format: "percent",
+      input: true,
+    });
+    push("blank");
+  }
+
+  push("section", text("Order"));
+  push(
+    "header",
+    text("Item"),
+    text("Qty"),
+    text(`Price per ${unit}`),
+    text("Amount"),
+  );
+  const lineStart = rows.length + 1;
+  for (const p of parts) {
+    const r = rows.length + 1;
+    const refs = p.model.refs;
+    if (!refs) throw new Error(`Sheet for ${p.line.label} has no refs`);
+    push(
+      "row",
+      text(`${product.name} — ${p.line.label}`),
+      {
+        value: p.line.result.quantity,
+        formula: `MAX(1,INT(${sheetRef(p.name, refs.quantity)}))`,
+        format: "number",
+      },
+      {
+        value: p.line.result.pricePerUnit,
+        formula: sheetRef(p.name, refs.price),
+        format: "money",
+      },
+      {
+        value: p.line.result.subtotal,
+        formula: `B${r}*C${r}`,
+        format: "money",
+      },
+    );
+  }
+  const lineEnd = rows.length;
+  const subRow = push("subtotal", text("Subtotal"), null, null, {
+    value: combined.subtotal,
+    formula: lineEnd >= lineStart ? `SUM(F${lineStart}:F${lineEnd})` : "0",
+    format: "money",
+  });
+  const sub = C(subRow);
+  const across = (pick: (refs: SheetRefs) => string) =>
+    parts.length
+      ? parts
+          .map((p) => sheetRef(p.name, pick(p.model.refs as SheetRefs)))
+          .join("+")
+      : "0";
+
+  const discountFormula =
+    discountRow === undefined
+      ? across((r) => r.discount)
+      : order.discount.mode === "percent"
+        ? `MIN(${sub},MAX(0,${sub}*B${discountRow}/100))`
+        : `MIN(${sub},MAX(0,B${discountRow}))`;
+  const discountOut = push("row", text("Discount"), null, null, {
+    value: combined.discount,
+    formula: discountFormula,
+    format: "money",
+  });
+  const taxOut = push("row", text("Tax / GST"), null, null, {
+    value: combined.tax,
+    formula:
+      taxRow === undefined
+        ? across((r) => r.tax)
+        : `(${sub}-${C(discountOut)})*B${taxRow}/100`,
+    format: "money",
+  });
+  push("total", text("Order total"), null, null, {
+    value: combined.total,
+    formula: `${sub}-${C(discountOut)}+${C(taxOut)}`,
+    format: "money",
+    bold: true,
+  });
+  const orderCost = parts.length
+    ? parts
+        .map(
+          (p, i) =>
+            `${sheetRef(p.name, (p.model.refs as SheetRefs).cost)}*B${lineStart + i}`,
+        )
+        .join("+")
+    : "0";
+  push("row", text("Order profit"), null, null, {
+    value: combined.orderProfit,
+    formula: `${sub}-${C(discountOut)}-(${orderCost})`,
+    format: "money",
+  });
+
+  return {
+    name: `${product.name} — ${doc.quoteLabel}`,
+    sheetName: "Summary",
+    rows,
+    extraSheets: parts.map((p) => ({ name: p.name, rows: p.model.rows })),
+    notes: sheetNotes(doc),
     currencySymbol: currencySymbol(settings.currency),
   };
 }
@@ -520,7 +740,49 @@ export async function renderXlsx(
   wb.creator = "ArchCalc Quote Studio";
   wb.created = new Date();
 
-  const ws = wb.addWorksheet("Quote", {
+  for (const sheet of [
+    { name: model.sheetName, rows: model.rows },
+    ...model.extraSheets,
+  ]) {
+    writeSheet(wb, sheet.name, sheet.rows, model.currencySymbol, t);
+  }
+
+  if (model.notes.length) {
+    const ns = wb.addWorksheet("Notes", { views: [{ showGridLines: false }] });
+    ns.getColumn(1).width = 100;
+    for (const sec of model.notes) {
+      const head = ns.addRow([sec.title]);
+      head.getCell(1).font = {
+        bold: true,
+        size: 12,
+        color: { argb: argb(t.accentText) },
+      };
+      head.getCell(1).fill = {
+        type: "pattern",
+        pattern: "solid",
+        fgColor: { argb: argb(t.accent) },
+      };
+      for (const line of sec.lines) {
+        ns.addRow([line]).getCell(1).alignment = {
+          wrapText: true,
+          vertical: "top",
+        };
+      }
+      ns.addRow([]);
+    }
+  }
+
+  return new Uint8Array(await wb.xlsx.writeBuffer());
+}
+
+function writeSheet(
+  wb: import("exceljs").Workbook,
+  name: string,
+  rows: SheetRow[],
+  currency: string,
+  t: ExportTemplate,
+) {
+  const ws = wb.addWorksheet(name, {
     views: [{ showGridLines: false }],
     pageSetup: {
       paperSize: 9,
@@ -539,7 +801,7 @@ export async function renderXlsx(
     { width: 18 },
   ];
 
-  const sym = model.currencySymbol.replace(/"/g, "");
+  const sym = currency.replace(/"/g, "");
   const formats: Record<CellFormat, string | undefined> = {
     money: `"${sym}"#,##0.00;-"${sym}"#,##0.00`,
     percent: '0.##"%"',
@@ -549,7 +811,7 @@ export async function renderXlsx(
   };
   const thin = { style: "thin" as const, color: { argb: argb(t.border) } };
 
-  model.rows.forEach((row, i) => {
+  rows.forEach((row, i) => {
     const r = ws.getRow(i + 1);
     row.cells.forEach((cell, c) => {
       if (!cell) return;
@@ -632,33 +894,6 @@ export async function renderXlsx(
         break;
     }
   });
-
-  if (model.notes.length) {
-    const ns = wb.addWorksheet("Notes", { views: [{ showGridLines: false }] });
-    ns.getColumn(1).width = 100;
-    for (const sec of model.notes) {
-      const head = ns.addRow([sec.title]);
-      head.getCell(1).font = {
-        bold: true,
-        size: 12,
-        color: { argb: argb(t.accentText) },
-      };
-      head.getCell(1).fill = {
-        type: "pattern",
-        pattern: "solid",
-        fgColor: { argb: argb(t.accent) },
-      };
-      for (const line of sec.lines) {
-        ns.addRow([line]).getCell(1).alignment = {
-          wrapText: true,
-          vertical: "top",
-        };
-      }
-      ns.addRow([]);
-    }
-  }
-
-  return new Uint8Array(await wb.xlsx.writeBuffer());
 }
 
 const csvCell = (cell: SheetCell | null) => {

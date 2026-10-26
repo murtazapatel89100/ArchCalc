@@ -94,7 +94,11 @@ export function BreakdownPanel(props: {
   );
 }
 
-function Stat(props: { label: string; value: string; tone?: "good" | "bad" }) {
+export function Stat(props: {
+  label: string;
+  value: string;
+  tone?: "good" | "bad";
+}) {
   return (
     <div>
       <p class="text-[var(--color-app-text-secondary)]">{props.label}</p>
@@ -131,7 +135,7 @@ function Section(props: {
   );
 }
 
-function Line(props: {
+export function Line(props: {
   label: string;
   value: string;
   strong?: boolean;

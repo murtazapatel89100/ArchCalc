@@ -4,7 +4,13 @@ import { v4 as uuidv4 } from "uuid";
 import { createLocalStorage } from "../../utils/createLocalStorage";
 import { getBuilder, type QuoteBuilder } from "./builders";
 import { normalizeInputs, toRows } from "./groups";
-import type { Product, Quote, QuoteInputs, QuoteSettings } from "./types";
+import type {
+  ClientOrder,
+  Product,
+  Quote,
+  QuoteInputs,
+  QuoteSettings,
+} from "./types";
 
 export const QUOTES_KEY = "archcalc_quotes";
 export const QUOTE_SETTINGS_KEY = "archcalc_quote_settings";
@@ -109,6 +115,27 @@ const newQuote = (label: string, inputs: QuoteInputs): Quote => {
   };
 };
 
+/** A new, unsaved client order for some of a product's quotes. */
+export function draftOrder(
+  quoteIds: string[],
+  taxPercent: number,
+  label: string,
+): ClientOrder {
+  const now = Date.now();
+  return {
+    id: uuidv4(),
+    label,
+    client: "",
+    quoteIds: [...quoteIds],
+    taxMode: "order",
+    discount: { mode: "percent", value: 0 },
+    taxPercent,
+    notes: "",
+    createdAt: now,
+    updatedAt: now,
+  };
+}
+
 const indexOf = (productId: string) =>
   store.products.findIndex((p) => p.id === productId);
 
@@ -164,8 +191,49 @@ export const quoteActions = {
   deleteQuote(productId: string, quoteId: string) {
     store.setProducts(
       (p) => p.id === productId,
-      "quotes",
-      (qs) => qs.filter((q) => q.id !== quoteId),
+      produce((p) => {
+        p.quotes = p.quotes.filter((q) => q.id !== quoteId);
+        // Client orders keep pointing at the quotes that are left.
+        for (const o of p.orders ?? []) {
+          o.quoteIds = o.quoteIds.filter((id) => id !== quoteId);
+        }
+      }),
+    );
+  },
+
+  /** Save a client order (e.g. a draft from Combine) on its product. */
+  saveOrder(productId: string, order: ClientOrder) {
+    const i = indexOf(productId);
+    if (i < 0) return undefined;
+    const saved: ClientOrder = JSON.parse(JSON.stringify(order));
+    saved.updatedAt = Date.now();
+    store.setProducts(i, "orders", (os) => [...(os ?? []), saved]);
+    return saved;
+  },
+
+  /** Mutate one saved client order in place; bumps `updatedAt`. */
+  updateOrder(
+    productId: string,
+    orderId: string,
+    fn: (o: ClientOrder) => void,
+  ) {
+    store.setProducts(
+      (p) => p.id === productId,
+      produce((p) => {
+        const o = p.orders?.find((x) => x.id === orderId);
+        if (!o) return;
+        fn(o);
+        o.updatedAt = Date.now();
+      }),
+    );
+  },
+
+  deleteOrder(productId: string, orderId: string) {
+    store.setProducts(
+      (p) => p.id === productId,
+      produce((p) => {
+        p.orders = (p.orders ?? []).filter((o) => o.id !== orderId);
+      }),
     );
   },
 

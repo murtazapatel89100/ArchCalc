@@ -498,6 +498,28 @@ async function tour(page, marks) {
     await wait(1600);
     await click(page.getByRole("button", { name: "Document" }), 600);
     await click(page.getByText("×", { exact: true }), 600);
+
+    // Combine both quotes into one client order.
+    await click(page.getByRole("button", { name: "Dragon keychain" }), 1000);
+    await click(page.getByLabel("Select PLA Basic to combine"), 300);
+    await click(page.getByLabel("Select PETG to combine"), 400);
+    await click(page.getByRole("button", { name: /^Combine/ }), 1000);
+    await click(page.getByLabel("Order name"));
+    await page.keyboard.press("Control+A");
+    await type("Diwali order");
+    await click(page.getByLabel("Client"));
+    await type("Asha Traders");
+    await wait(600);
+    await click(page.getByRole("button", { name: "Save as client order" }), 1400);
+    await shot("quote-order");
+    await click(page.getByRole("button", { name: "Export quote" }), 1400);
+    await shot("quote-order-export");
+    await click(page.getByText("×", { exact: true }), 600);
+    await click(page.getByRole("button", { name: "Each quote's own" }), 1200);
+    await click(page.getByRole("button", { name: "One for the order" }), 800);
+    await click(page.getByRole("button", { name: "Dragon keychain" }), 1400);
+    await shot("quote-list");
+
     await click(page.getByRole("button", { name: "All products" }), 1600);
     await shot("quote-products");
   });
