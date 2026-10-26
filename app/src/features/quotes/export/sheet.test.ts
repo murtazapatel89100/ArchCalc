@@ -668,6 +668,44 @@ describe("client orders", () => {
     });
   });
 
+  it("puts every quote's sheet in the CSV after the summary", () => {
+    const b = print3d();
+    const product = colourways();
+    const order = draftOrder(
+      product.quotes.map((q) => q.id),
+      18,
+      "Diwali order",
+    );
+    const combined = orderResult(b, product, order);
+    const doc = buildCombinedDoc(
+      product,
+      order,
+      combined,
+      b,
+      defaultQuoteSettings,
+      { includeBreakdown: true },
+    );
+    const csv = new TextDecoder().decode(
+      renderCsv(
+        buildCombinedSheet(
+          product,
+          order,
+          combined,
+          b,
+          defaultQuoteSettings,
+          doc,
+        ),
+      ),
+    );
+    const summaryAt = csv.indexOf("Order total");
+    for (const label of ["Black + Red", "Blue + Black", "Black + White"]) {
+      // The sheet's own heading line, then its filament breakdown.
+      const at = csv.indexOf(`\r\n${label}\r\n`);
+      expect(at).toBeGreaterThan(summaryAt);
+      expect(csv.indexOf("Filaments (per item)", at)).toBeGreaterThan(at);
+    }
+  });
+
   it("writes one line per quote and a breakdown for each", () => {
     const b = print3d();
     const product = colourways();
