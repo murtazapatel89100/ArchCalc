@@ -67,11 +67,36 @@ export interface Quote {
   updatedAt: number;
 }
 
+/** How a combined quote applies discount and tax. */
+export type TaxMode = "order" | "each";
+
+/**
+ * Several quotes of one product (e.g. one per colourway) combined into a single quote for a
+ * client. Prices are read live from the quotes, so editing a quote updates the order.
+ */
+export interface ClientOrder {
+  id: string;
+  label: string;
+  client: string;
+  quoteIds: string[];
+  /** "order": one discount and tax on the combined subtotal; "each": every quote's own. */
+  taxMode: TaxMode;
+  /** Used when `taxMode` is "order". */
+  discount: { mode: DiscountMode; value: number };
+  taxPercent: number;
+  notes: string;
+  sections?: NoteSection[];
+  createdAt: number;
+  updatedAt: number;
+}
+
 export interface Product {
   id: string;
   name: string;
   builderId: string;
   quotes: Quote[];
+  /** Saved client orders. Optional: products saved before orders existed don't have it. */
+  orders?: ClientOrder[];
   createdAt: number;
 }
 

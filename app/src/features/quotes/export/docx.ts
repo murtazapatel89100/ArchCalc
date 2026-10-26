@@ -177,25 +177,17 @@ export async function renderDocx(
   )[] = [
     band,
     new Paragraph({ text: "" }),
-    pairTable(
-      ["Quotation", ""],
-      [
-        { label: "Reference", value: doc.reference },
-        { label: "Date", value: doc.date },
-        { label: "Product", value: doc.productName },
-        { label: "Variant", value: doc.quoteLabel },
-      ],
-    ),
+    pairTable(["Quotation", ""], doc.details),
     heading("Summary"),
     table(
       ["Item", "Qty", "Unit price", "Amount"],
       [
-        [
-          { text: doc.lineItem.item },
-          { text: doc.lineItem.qty },
-          { text: doc.lineItem.unitPrice },
-          { text: doc.lineItem.amount },
-        ],
+        ...doc.lineItems.map((li) => [
+          { text: li.item },
+          { text: li.qty },
+          { text: li.unitPrice },
+          { text: li.amount },
+        ]),
         ...doc.totals.map((r) => [
           { text: r.label, strong: r.strong },
           { text: "" },
@@ -207,13 +199,14 @@ export async function renderDocx(
     ),
   ];
 
-  if (doc.breakdown) {
-    children.push(heading(`Cost breakdown (per ${doc.unitLabel})`));
-    children.push(pairTable(["Component", "Amount"], doc.breakdown));
+  for (const t of doc.breakdowns ?? []) {
+    children.push(heading(t.title));
+    children.push(pairTable(["Component", "Amount"], t.rows));
   }
-  if (doc.inputs?.length) {
-    children.push(heading(`${doc.builderName} inputs`));
-    children.push(pairTable(["Parameter", "Value"], doc.inputs));
+  for (const t of doc.inputs ?? []) {
+    if (!t.rows.length) continue;
+    children.push(heading(t.title));
+    children.push(pairTable(["Parameter", "Value"], t.rows));
   }
   if (doc.notes) {
     children.push(heading("Notes"));

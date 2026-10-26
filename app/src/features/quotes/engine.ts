@@ -1,4 +1,10 @@
-import type { CostLine, QuoteInputs, QuoteResult, RoundingMode } from "./types";
+import type {
+  CostLine,
+  DiscountMode,
+  QuoteInputs,
+  QuoteResult,
+  RoundingMode,
+} from "./types";
 
 /** Treat NaN, Infinity and missing values as zero so a half-filled form never breaks the totals. */
 export const num = (value: unknown): number => {
@@ -29,6 +35,18 @@ export function roundPrice(price: number, mode: RoundingMode): number {
     default:
       return price;
   }
+}
+
+/** A discount on `subtotal`, as % or a fixed amount, never negative or above the subtotal. */
+export function discountAmount(
+  subtotal: number,
+  discount: { mode: DiscountMode; value: number },
+): number {
+  const value = num(discount.value);
+  return Math.min(
+    subtotal,
+    Math.max(0, discount.mode === "percent" ? (subtotal * value) / 100 : value),
+  );
 }
 
 export interface ComputeOptions {
@@ -113,16 +131,7 @@ export function computeQuote(
   }
 
   const subtotal = pricePerUnit * quantity;
-  const discountValue = num(inputs.discount.value);
-  const discount = Math.min(
-    subtotal,
-    Math.max(
-      0,
-      inputs.discount.mode === "percent"
-        ? (subtotal * discountValue) / 100
-        : discountValue,
-    ),
-  );
+  const discount = discountAmount(subtotal, inputs.discount);
   const taxable = subtotal - discount;
   const tax = (taxable * num(inputs.taxPercent)) / 100;
   const orderCost = costPerUnit * quantity;

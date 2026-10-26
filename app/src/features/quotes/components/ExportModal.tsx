@@ -9,29 +9,28 @@ import {
 import { createMemo, createSignal, For, type JSX, Show } from "solid-js";
 import { Button, Modal } from "../../../components/ui";
 import { cn } from "../../../utils/cn";
-import type { QuoteBuilder } from "../builders";
 import {
-  buildExportDoc,
   type ExportDoc,
+  type ExportOptions,
   exportFileName,
 } from "../export/document";
 import { quoteToMarkdown } from "../export/markdown";
 import { markdownToHtml } from "../export/markdown-render";
 import { type ExportFormat, saveExport } from "../export/save";
-import { buildSheet, type SheetCell, type SheetModel } from "../export/sheet";
+import type { SheetCell, SheetModel } from "../export/sheet";
 import {
   type ExportTemplate,
   getTemplate,
   templates,
 } from "../export/templates";
 import { formatMoney, formatNumber } from "../format";
-import type {
-  ExportKind,
-  Product,
-  Quote,
-  QuoteResult,
-  QuoteSettings,
-} from "../types";
+import type { ExportKind, QuoteSettings } from "../types";
+
+/** What to export: a single quote or a client order, as a document and as a spreadsheet. */
+export interface ExportSource {
+  doc: (options: ExportOptions) => ExportDoc;
+  sheet: (doc: ExportDoc) => SheetModel;
+}
 
 type FormatOption = { id: ExportFormat; label: string; icon: typeof FileText };
 
@@ -78,10 +77,7 @@ async function render(
 export function ExportModal(props: {
   open: boolean;
   onClose: () => void;
-  product: Product;
-  quote: Quote;
-  result: QuoteResult;
-  builder: QuoteBuilder;
+  source: ExportSource;
   settings: QuoteSettings;
   onTemplateChange: (id: string) => void;
   onKindChange: (kind: ExportKind) => void;
@@ -96,26 +92,12 @@ export function ExportModal(props: {
   const kind = () => props.settings.exportKind ?? "document";
   const template = () => getTemplate(props.settings.templateId);
   const doc = createMemo(() =>
-    buildExportDoc(
-      props.product,
-      props.quote,
-      props.result,
-      props.builder,
-      props.settings,
-      // The spreadsheet always carries the full breakdown (it's what the formulas use).
-      { includeBreakdown: includeBreakdown() || kind() === "spreadsheet" },
-    ),
+    // The spreadsheet always carries the full breakdown (it's what the formulas use).
+    props.source.doc({
+      includeBreakdown: includeBreakdown() || kind() === "spreadsheet",
+    }),
   );
-  const sheet = createMemo(() =>
-    buildSheet(
-      props.product,
-      props.quote,
-      props.result,
-      props.builder,
-      props.settings,
-      doc(),
-    ),
-  );
+  const sheet = createMemo(() => props.source.sheet(doc()));
   const previewHtml = () => markdownToHtml(quoteToMarkdown(doc(), false));
 
   const runExport = async (format: ExportFormat) => {
@@ -419,6 +401,12 @@ function SheetPreview(props: {
           </For>
         </tbody>
       </table>
+      <Show when={props.model.extraSheets.length}>
+        <p class="px-3 py-2 text-[10px] text-neutral-500 border-t border-neutral-200">
+          + a live sheet per quote:{" "}
+          {props.model.extraSheets.map((s) => `“${s.name}”`).join(", ")}
+        </p>
+      </Show>
       <Show when={props.model.notes.length}>
         <p class="px-3 py-2 text-[10px] text-neutral-500 border-t border-neutral-200">
           + “Notes” sheet with {props.model.notes.length} section

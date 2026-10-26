@@ -3,19 +3,26 @@ import {
   Columns3,
   CopyPlus,
   FileText,
+  Layers,
   Package,
   Plus,
   Trash2,
+  Users,
 } from "lucide-solid";
 import { createMemo, createSignal, For, type JSX, Show } from "solid-js";
+import { createStore, produce } from "solid-js/store";
 import { Button, Card, inputClass } from "../../../components/ui";
 import { cn } from "../../../utils/cn";
 import type { QuoteBuilder } from "../builders";
+import { orderResult } from "../combined";
+import { buildExportDoc } from "../export/document";
+import { buildSheet } from "../export/sheet";
 import { currencySymbol, formatMoney, formatPercent } from "../format";
 import { resultFor } from "../result";
-import { products, quoteActions, useQuoteSettings } from "../store";
-import type { Product, Quote } from "../types";
+import { draftOrder, products, quoteActions, useQuoteSettings } from "../store";
+import type { ClientOrder, Product, Quote } from "../types";
 import { BreakdownPanel } from "./BreakdownPanel";
+import { CombinedView } from "./CombinedView";
 import { CompareView } from "./CompareView";
 import { ExportModal } from "./ExportModal";
 import { QuoteEditor } from "./QuoteEditor";
@@ -49,24 +56,55 @@ export function QuoteWorkspace(props: { builder: QuoteBuilder }) {
   const [productId, setProductId] = createSignal<string | null>(null);
   const [quoteId, setQuoteId] = createSignal<string | null>(null);
   const [comparing, setComparing] = createSignal(false);
+  const [orderId, setOrderId] = createSignal<string | null>(null);
+  // An unsaved combined quote, from ticking quotes and pressing Combine.
+  const [draft, setDraft] = createStore<{ order: ClientOrder | null }>({
+    order: null,
+  });
 
   const product = () => builderProducts().find((p) => p.id === productId());
   const quote = () => product()?.quotes.find((q) => q.id === quoteId());
+  const savedOrder = () => product()?.orders?.find((o) => o.id === orderId());
 
-  const openProducts = () => {
-    setProductId(null);
+  const reset = () => {
     setQuoteId(null);
     setComparing(false);
+    setOrderId(null);
+    setDraft("order", null);
+  };
+  const openProducts = () => {
+    reset();
+    setProductId(null);
   };
   const openProduct = (id: string) => {
+    reset();
     setProductId(id);
-    setQuoteId(null);
-    setComparing(false);
   };
   const openQuote = (pid: string, qid: string) => {
+    reset();
     setProductId(pid);
     setQuoteId(qid);
-    setComparing(false);
+  };
+  const openOrder = (oid: string) => {
+    reset();
+    setOrderId(oid);
+  };
+  const combine = (p: Product, quoteIds: string[]) => {
+    reset();
+    setDraft(
+      "order",
+      draftOrder(
+        quoteIds,
+        settings().defaultTaxPercent,
+        `Order ${(p.orders?.length ?? 0) + 1}`,
+      ),
+    );
+  };
+  const deleteOrder = (p: Product, o: ClientOrder) => {
+    if (!confirm(`Delete client order "${o.label}"? Its quotes are kept.`))
+      return;
+    quoteActions.deleteOrder(p.id, o.id);
+    if (orderId() === o.id) openProduct(p.id);
   };
 
   const priceOf = (q: Quote) => resultFor(props.builder, q.inputs);
@@ -112,13 +150,18 @@ export function QuoteWorkspace(props: { builder: QuoteBuilder }) {
             <Crumb onClick={openProducts}>All products</Crumb>
             <ChevronRight size={14} class="shrink-0 opacity-60" />
             <Show
-              when={quote() || comparing()}
+              when={quote() || comparing() || savedOrder() || draft.order}
               fallback={<CrumbCurrent>{p().name}</CrumbCurrent>}
             >
               <Crumb onClick={() => openProduct(p().id)}>{p().name}</Crumb>
               <ChevronRight size={14} class="shrink-0 opacity-60" />
               <CrumbCurrent>
-                {comparing() ? "Compare" : quote()?.label}
+                {comparing()
+                  ? "Compare"
+                  : (quote()?.label ??
+                    savedOrder()?.label ??
+                    draft.order?.label ??
+                    "")}
               </CrumbCurrent>
             </Show>
           </nav>
@@ -146,27 +189,74 @@ export function QuoteWorkspace(props: { builder: QuoteBuilder }) {
               <Show
                 when={comparing()}
                 fallback={
-                  <QuoteList
-                    product={p()}
-                    builder={props.builder}
-                    money={money}
-                    priceOf={priceOf}
-                    onOpen={(qid) => openQuote(p().id, qid)}
-                    onCompare={() => setComparing(true)}
-                    onNew={() => {
-                      const q = quoteActions.addQuote(
-                        p().id,
-                        props.builder,
-                        settings().defaultTaxPercent,
-                      );
-                      if (q) openQuote(p().id, q.id);
-                    }}
-                    onDuplicate={(qid) =>
-                      quoteActions.duplicateQuote(p().id, qid)
+                  <Show
+                    when={savedOrder() ?? draft.order}
+                    fallback={
+                      <QuoteList
+                        product={p()}
+                        builder={props.builder}
+                        money={money}
+                        priceOf={priceOf}
+                        onOpen={(qid) => openQuote(p().id, qid)}
+                        onCompare={() => setComparing(true)}
+                        onNew={() => {
+                          const q = quoteActions.addQuote(
+                            p().id,
+                            props.builder,
+                            settings().defaultTaxPercent,
+                          );
+                          if (q) openQuote(p().id, q.id);
+                        }}
+                        onDuplicate={(qid) =>
+                          quoteActions.duplicateQuote(p().id, qid)
+                        }
+                        onDeleteQuote={(q) => deleteQuote(p(), q)}
+                        onDeleteProduct={() => deleteProduct(p())}
+                        onCombine={(ids) => combine(p(), ids)}
+                        onOpenOrder={openOrder}
+                        onDeleteOrder={(o) => deleteOrder(p(), o)}
+                      />
                     }
-                    onDeleteQuote={(q) => deleteQuote(p(), q)}
-                    onDeleteProduct={() => deleteProduct(p())}
-                  />
+                  >
+                    {(o) => (
+                      <CombinedView
+                        product={p()}
+                        builder={props.builder}
+                        order={o()}
+                        saved={!!savedOrder()}
+                        settings={settings()}
+                        onUpdate={(fn) => {
+                          const saved = savedOrder();
+                          if (saved)
+                            quoteActions.updateOrder(p().id, saved.id, fn);
+                          else
+                            setDraft(
+                              "order",
+                              produce((d) => d && fn(d)),
+                            );
+                        }}
+                        onSave={() => {
+                          if (!draft.order) return;
+                          const saved = quoteActions.saveOrder(
+                            p().id,
+                            draft.order,
+                          );
+                          if (saved) openOrder(saved.id);
+                        }}
+                        onDelete={() => {
+                          const saved = savedOrder();
+                          if (saved) deleteOrder(p(), saved);
+                        }}
+                        onOpenQuote={(qid) => openQuote(p().id, qid)}
+                        onTemplateChange={(templateId) =>
+                          updateSettings({ templateId })
+                        }
+                        onKindChange={(exportKind) =>
+                          updateSettings({ exportKind })
+                        }
+                      />
+                    )}
+                  </Show>
                 }
               >
                 <CompareView
@@ -330,7 +420,17 @@ function QuoteList(props: {
   onDuplicate: (quoteId: string) => void;
   onDeleteQuote: (q: Quote) => void;
   onDeleteProduct: () => void;
+  onCombine: (quoteIds: string[]) => void;
+  onOpenOrder: (orderId: string) => void;
+  onDeleteOrder: (o: ClientOrder) => void;
 }) {
+  const [picked, setPicked] = createSignal<string[]>([]);
+  // Ticked quotes that still exist, in the product's quote order.
+  const selection = () =>
+    props.product.quotes.map((q) => q.id).filter((id) => picked().includes(id));
+  const toggle = (id: string, on: boolean) =>
+    setPicked((ids) => (on ? [...ids, id] : ids.filter((x) => x !== id)));
+
   return (
     <div class="flex flex-col gap-3">
       <div class="flex flex-wrap items-center gap-2">
@@ -353,6 +453,15 @@ function QuoteList(props: {
           <Button size="sm" onClick={props.onCompare}>
             <Columns3 size={14} /> Compare
           </Button>
+          <Button
+            size="sm"
+            disabled={selection().length < 2}
+            title="Tick two or more quotes to combine them into one quote for a client"
+            onClick={() => props.onCombine(selection())}
+          >
+            <Layers size={14} /> Combine
+            {selection().length ? ` (${selection().length})` : ""}
+          </Button>
         </Show>
         <Button size="sm" variant="primary" onClick={props.onNew}>
           <Plus size={14} /> New quote
@@ -366,6 +475,17 @@ function QuoteList(props: {
             return (
               <li>
                 <ListRow
+                  leading={
+                    <Show when={props.product.quotes.length > 1}>
+                      <input
+                        type="checkbox"
+                        aria-label={`Select ${q.label} to combine`}
+                        checked={selection().includes(q.id)}
+                        onChange={(e) => toggle(q.id, e.currentTarget.checked)}
+                        class="ml-4 accent-[var(--color-app-accent)]"
+                      />
+                    </Show>
+                  }
                   onClick={() => props.onOpen(q.id)}
                   icon={<FileText size={18} />}
                   title={q.label || "Untitled quote"}
@@ -403,6 +523,51 @@ function QuoteList(props: {
           }}
         </For>
       </ul>
+
+      <Show when={props.product.orders?.length}>
+        <h2 class="text-sm font-semibold mt-3">
+          Client orders{" "}
+          <span class="text-[var(--color-app-text-secondary)] font-normal">
+            ({props.product.orders?.length})
+          </span>
+        </h2>
+        <ul class="flex flex-col gap-2">
+          <For each={props.product.orders}>
+            {(o) => {
+              const r = () => orderResult(props.builder, props.product, o);
+              return (
+                <li>
+                  <ListRow
+                    onClick={() => props.onOpenOrder(o.id)}
+                    icon={<Users size={18} />}
+                    title={o.label || "Client order"}
+                    subtitle={`${o.client.trim() || "No client"} · ${r().lines.length} ${r().lines.length === 1 ? "quote" : "quotes"} · updated ${timeAgo(o.updatedAt)}`}
+                    meta={
+                      <>
+                        <span class="text-[11px] text-[var(--color-app-text-secondary)]">
+                          Order total
+                        </span>
+                        <span class="font-mono font-semibold">
+                          {props.money(r().total)}
+                        </span>
+                      </>
+                    }
+                    actions={
+                      <IconButton
+                        label={`Delete ${o.label}`}
+                        danger
+                        onClick={() => props.onDeleteOrder(o)}
+                      >
+                        <Trash2 size={15} />
+                      </IconButton>
+                    }
+                  />
+                </li>
+              );
+            }}
+          </For>
+        </ul>
+      </Show>
     </div>
   );
 }
@@ -477,10 +642,26 @@ function QuoteEditorView(props: {
       <ExportModal
         open={exportOpen()}
         onClose={() => setExportOpen(false)}
-        product={props.product}
-        quote={props.quote}
-        result={result()}
-        builder={props.builder}
+        source={{
+          doc: (options) =>
+            buildExportDoc(
+              props.product,
+              props.quote,
+              result(),
+              props.builder,
+              props.settings,
+              options,
+            ),
+          sheet: (doc) =>
+            buildSheet(
+              props.product,
+              props.quote,
+              result(),
+              props.builder,
+              props.settings,
+              doc,
+            ),
+        }}
         settings={props.settings}
         onTemplateChange={props.onTemplateChange}
         onKindChange={props.onKindChange}
@@ -494,6 +675,8 @@ function QuoteEditorView(props: {
 // ------------------------------------------------------------------------------------------------
 
 function ListRow(props: {
+  /** Shown before the row's button, e.g. a selection checkbox. */
+  leading?: JSX.Element;
   onClick: () => void;
   icon: JSX.Element;
   title: string;
@@ -503,6 +686,7 @@ function ListRow(props: {
 }) {
   return (
     <div class="group flex items-center gap-2 rounded-xl border border-[var(--color-app-border)] bg-[var(--color-app-surface)] hover:border-[var(--color-app-accent)]/50 transition-colors pr-2">
+      {props.leading}
       <button
         onClick={props.onClick}
         class="flex flex-1 min-w-0 items-center gap-4 p-4 text-left"

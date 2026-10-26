@@ -29,24 +29,17 @@ export function quoteToMarkdown(doc: ExportDoc, standalone = true): string {
     if (doc.contact) out.push(esc(doc.contact));
   }
 
-  out.push(
-    rowsTable(
-      ["Quotation", ""],
-      [
-        { label: "Reference", value: doc.reference },
-        { label: "Date", value: doc.date },
-        { label: "Product", value: doc.productName },
-        { label: "Variant", value: doc.quoteLabel },
-      ],
-    ),
-  );
+  out.push(rowsTable(["Quotation", ""], doc.details));
 
   out.push("## Summary");
   out.push(
     [
       "| Item | Qty | Unit price | Amount |",
       "| :--- | ---: | ---: | ---: |",
-      `| ${esc(doc.lineItem.item)} | ${doc.lineItem.qty} | ${esc(doc.lineItem.unitPrice)} | ${esc(doc.lineItem.amount)} |`,
+      ...doc.lineItems.map(
+        (li) =>
+          `| ${esc(li.item)} | ${li.qty} | ${esc(li.unitPrice)} | ${esc(li.amount)} |`,
+      ),
       ...doc.totals.map(
         (t) =>
           `| ${bold(esc(t.label), t.strong)} | | | ${bold(esc(t.value), t.strong)} |`,
@@ -54,13 +47,14 @@ export function quoteToMarkdown(doc: ExportDoc, standalone = true): string {
     ].join("\n"),
   );
 
-  if (doc.breakdown) {
-    out.push(`## Cost breakdown (per ${doc.unitLabel})`);
-    out.push(rowsTable(["Component", "Amount"], doc.breakdown));
+  for (const t of doc.breakdowns ?? []) {
+    out.push(`## ${esc(t.title)}`);
+    out.push(rowsTable(["Component", "Amount"], t.rows));
   }
-  if (doc.inputs?.length) {
-    out.push(`## ${esc(doc.builderName)} inputs`);
-    out.push(rowsTable(["Parameter", "Value"], doc.inputs));
+  for (const t of doc.inputs ?? []) {
+    if (!t.rows.length) continue;
+    out.push(`## ${esc(t.title)}`);
+    out.push(rowsTable(["Parameter", "Value"], t.rows));
   }
   // Notes and extra sections are user-written markdown, so they're kept as-is (headings are
   // demoted to nest under the section title).
