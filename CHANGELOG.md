@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.6.1](https://github.com/murtazapatel89100/ArchCalc/compare/archcalc-v1.6.0...archcalc-v1.6.1) (2026-10-26)
+
+
+### Bug Fixes
+
+* **app:** show each quote's sheet in the client order spreadsheet preview ([#24](https://github.com/murtazapatel89100/ArchCalc/issues/24)) ([2ff039c](https://github.com/murtazapatel89100/ArchCalc/commit/2ff039cbc8b9721ec1218694445c4ae334d6ed9f))
+
 ## [1.6.0](https://github.com/murtazapatel89100/ArchCalc/compare/archcalc-v1.5.0...archcalc-v1.6.0) (2026-10-26)
 
 
