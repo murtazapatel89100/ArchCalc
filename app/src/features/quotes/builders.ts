@@ -22,6 +22,13 @@ export interface FieldDef {
   suffix?: string;
   default: number;
   hint?: string;
+  /** Only shown and priced in detailed quotes, e.g. printer power draw. */
+  detailed?: boolean;
+}
+
+/** A base-cost line from a builder; `detailed` lines are left out of simple quotes. */
+export interface BaseLine extends CostLine {
+  detailed?: boolean;
 }
 
 type Fields = Record<string, number>;
@@ -55,7 +62,16 @@ export interface GroupDef {
 
 export interface MigratedInputs {
   fields?: Fields;
-  groups: Record<string, GroupRowInit[]>;
+  groups?: Record<string, GroupRowInit[]>;
+}
+
+/** How many units the inputs make, e.g. plates × items per plate. */
+export interface Produces {
+  units: (f: Fields) => number;
+  /** The same as a spreadsheet formula; `r(key)` is a field's cell. */
+  formula: (r: (key: string) => string) => string;
+  /** Short working for the UI, e.g. "3 plates × 4 per plate". */
+  explain: (f: Fields) => string;
 }
 
 /** Helpers a builder's extra cost lines can use to refer to its groups. */
@@ -83,8 +99,11 @@ export interface QuoteBuilder {
   fields: FieldDef[];
   /** Repeatable rows (spools, fabrics, surfaces…). Their row costs are added to the base cost. */
   groups?: GroupDef[];
-  /** Base-cost lines other than group rows (e.g. electricity, labour). */
-  baseCost: (f: Fields, g: GroupTotals) => CostLine[];
+  /**
+   * Base-cost lines other than group rows (e.g. electricity, labour). Lines marked `detailed`
+   * may only use detailed fields and other detailed lines, since simple quotes drop them.
+   */
+  baseCost: (f: Fields, g: GroupTotals) => BaseLine[];
   /**
    * The same lines as spreadsheet formulas, one per `baseCost` line and in the same order, so
    * exported sheets stay live. `r(key)` is a field's cell; `line(i)` an earlier extra line.
@@ -95,10 +114,15 @@ export interface QuoteBuilder {
     g: GroupRefs,
   ) => string[];
   /**
-   * Convert inputs saved before this builder had groups (single-value fields only) into
-   * group rows plus any new single-value fields.
+   * Units the inputs make. Simple quotes use it as the order quantity; detailed quotes keep
+   * their own quantity and show the spare units or a shortfall.
    */
-  migrate?: (legacy: Fields) => MigratedInputs | undefined;
+  produces?: Produces;
+  /**
+   * Upgrade inputs saved by an older version (missing groups or fields): group rows built from
+   * old single-value fields, and values for new fields. `quantity` is the saved order quantity.
+   */
+  migrate?: (legacy: Fields, quantity: number) => MigratedInputs | undefined;
   /** Field whose value spreads per-batch materials across units (e.g. pieces per batch). */
   materialsDivisorField?: string;
   materialsHint: string;
@@ -110,6 +134,19 @@ export interface QuoteBuilder {
 }
 
 const f = (fields: Fields, key: string) => num(fields[key]);
+/** "4 plates × 3 per plate + 1 plate of 2" — the working behind `produces`. */
+const runs = (
+  [one, many]: [string, string],
+  count: number,
+  perRun: number,
+  partial: number,
+) => {
+  const full = `${count} ${count === 1 ? one : many} × ${perRun} per ${one}`;
+  return partial > 0 ? `${full} + 1 ${one} of ${partial}` : full;
+};
+/** Plates (or batches) needed for an order: at least one, never a fraction. */
+const platesFor = (quantity: number, perPlate: number) =>
+  Math.max(1, Math.ceil(safeDiv(quantity, perPlate)));
 // Saved inputs are plain JSON objects, so `in` is a safe own-property check here.
 const has = (fields: Fields, key: string) =>
   key in fields && Number.isFinite(fields[key]);
@@ -118,9 +155,11 @@ export const builders: QuoteBuilder[] = [
   {
     id: "print3d",
     name: "3D Print Costing",
-    desc: "Multiple filaments per plate, items per plate, machine time",
+    desc: "Multiple filaments, plates × items per plate, machine time",
     icon: Box,
     unitLabel: "item",
+    // One full plate.
+    defaultQuantity: 4,
     groups: [
       {
         key: "filaments",
@@ -174,11 +213,27 @@ export const builders: QuoteBuilder[] = [
         default: 4,
       },
       {
+        key: "plates",
+        label: "Plates",
+        kind: "number",
+        default: 1,
+        hint: "Full plates to print for the order.",
+      },
+      {
+        key: "partialPlate",
+        label: "Items on a partial plate",
+        kind: "number",
+        suffix: "pcs",
+        default: 0,
+        hint: "One more, partly filled plate for the rest — 0 if every plate is full.",
+      },
+      {
         key: "printHours",
         label: "Print time per plate",
         kind: "number",
         suffix: "hrs",
         default: 3,
+        detailed: true,
       },
       {
         key: "printerWatts",
@@ -186,12 +241,14 @@ export const builders: QuoteBuilder[] = [
         kind: "number",
         suffix: "W",
         default: 150,
+        detailed: true,
       },
       {
         key: "electricityRate",
         label: "Electricity rate (per kWh)",
         kind: "currency",
         default: 8,
+        detailed: true,
       },
       {
         key: "failureRate",
@@ -199,6 +256,7 @@ export const builders: QuoteBuilder[] = [
         kind: "percent",
         default: 5,
         hint: "Extra filament & power to cover failed prints.",
+        detailed: true,
       },
     ],
     baseCost: (x, g) => {
@@ -208,10 +266,11 @@ export const builders: QuoteBuilder[] = [
         f(x, "itemsPerPlate"),
       );
       return [
-        { label: "Printer electricity", amount: power },
+        { label: "Printer electricity", amount: power, detailed: true },
         {
           label: "Failure allowance",
           amount: ((g.cost("filaments") + power) * f(x, "failureRate")) / 100,
+          detailed: true,
         },
       ];
     },
@@ -219,10 +278,27 @@ export const builders: QuoteBuilder[] = [
       `IFERROR(${r("printHours")}*${r("printerWatts")}/1000*${r("electricityRate")}/${r("itemsPerPlate")},0)`,
       `(${g.cost("filaments")}+${line(0)})*${r("failureRate")}/100`,
     ],
-    migrate: (old) =>
-      has(old, "spoolPrice") || has(old, "plateGrams")
-        ? {
-            groups: {
+    produces: {
+      units: (x) =>
+        f(x, "plates") * f(x, "itemsPerPlate") + f(x, "partialPlate"),
+      formula: (r) =>
+        `${r("plates")}*${r("itemsPerPlate")}+${r("partialPlate")}`,
+      explain: (x) =>
+        runs(
+          ["plate", "plates"],
+          f(x, "plates"),
+          f(x, "itemsPerPlate"),
+          f(x, "partialPlate"),
+        ),
+    },
+    migrate: (old, quantity) => ({
+      // Enough plates for the saved order, so older quotes don't show a shortfall.
+      fields: has(old, "plates")
+        ? undefined
+        : { plates: platesFor(quantity, f(old, "itemsPerPlate")) },
+      groups:
+        has(old, "spoolPrice") || has(old, "plateGrams")
+          ? {
               filaments: [
                 {
                   name: "Filament",
@@ -233,9 +309,9 @@ export const builders: QuoteBuilder[] = [
                   },
                 },
               ],
-            },
-          }
-        : undefined,
+            }
+          : undefined,
+    }),
     materialsHint: "Add-ons per item, e.g. keyring, magnet, insert nut.",
     defaults: {
       materials: [{ name: "Keyring", unitCost: 4, qty: 1 }],
@@ -287,6 +363,7 @@ export const builders: QuoteBuilder[] = [
         label: "Revision rounds",
         kind: "number",
         default: 2,
+        detailed: true,
       },
       {
         key: "hoursPerRevision",
@@ -294,12 +371,14 @@ export const builders: QuoteBuilder[] = [
         kind: "number",
         suffix: "hrs",
         default: 2,
+        detailed: true,
       },
       {
         key: "revisionRate",
         label: "Revision hourly rate",
         kind: "currency",
         default: 800,
+        detailed: true,
       },
     ],
     baseCost: (x) => [
@@ -307,6 +386,7 @@ export const builders: QuoteBuilder[] = [
         label: "Revisions",
         amount:
           f(x, "revisions") * f(x, "hoursPerRevision") * f(x, "revisionRate"),
+        detailed: true,
       },
     ],
     baseFormulas: (r) => [
@@ -342,6 +422,8 @@ export const builders: QuoteBuilder[] = [
     desc: "Ingredients per batch, yield, oven/gas cost",
     icon: CakeSlice,
     unitLabel: "piece",
+    // One full batch.
+    defaultQuantity: 12,
     fields: [
       {
         key: "batchYield",
@@ -351,29 +433,63 @@ export const builders: QuoteBuilder[] = [
         default: 12,
       },
       {
+        key: "batches",
+        label: "Batches",
+        kind: "number",
+        default: 1,
+        hint: "Full batches to bake for the order.",
+      },
+      {
+        key: "partialBatch",
+        label: "Pieces in a smaller batch",
+        kind: "number",
+        suffix: "pcs",
+        default: 0,
+        hint: "One more, smaller batch for the rest — 0 if every batch is full.",
+      },
+      {
         key: "fuelCost",
         label: "Oven / gas cost per batch",
         kind: "currency",
         default: 30,
+        detailed: true,
       },
       {
         key: "labourCost",
         label: "Labour per batch",
         kind: "currency",
         default: 100,
+        detailed: true,
       },
     ],
     baseCost: (x) => [
       {
         label: "Oven / gas",
         amount: safeDiv(f(x, "fuelCost"), f(x, "batchYield")),
+        detailed: true,
       },
       {
         label: "Labour",
         amount: safeDiv(f(x, "labourCost"), f(x, "batchYield")),
+        detailed: true,
       },
     ],
     materialsDivisorField: "batchYield",
+    produces: {
+      units: (x) => f(x, "batches") * f(x, "batchYield") + f(x, "partialBatch"),
+      formula: (r) => `${r("batches")}*${r("batchYield")}+${r("partialBatch")}`,
+      explain: (x) =>
+        runs(
+          ["batch", "batches"],
+          f(x, "batches"),
+          f(x, "batchYield"),
+          f(x, "partialBatch"),
+        ),
+    },
+    migrate: (old, quantity) =>
+      has(old, "batches")
+        ? undefined
+        : { fields: { batches: platesFor(quantity, f(old, "batchYield")) } },
     baseFormulas: (r) => [
       `IFERROR(${r("fuelCost")}/${r("batchYield")},0)`,
       `IFERROR(${r("labourCost")}/${r("batchYield")},0)`,
@@ -592,11 +708,16 @@ export const builders: QuoteBuilder[] = [
         label: "Serving staff per plate",
         kind: "currency",
         default: 25,
+        detailed: true,
       },
     ],
     baseCost: (x) => [
       { label: "Disposables", amount: f(x, "disposablesPerPlate") },
-      { label: "Serving staff", amount: f(x, "staffPerPlate") },
+      {
+        label: "Serving staff",
+        amount: f(x, "staffPerPlate"),
+        detailed: true,
+      },
     ],
     baseFormulas: (r) => [r("disposablesPerPlate"), r("staffPerPlate")],
     migrate: (old) =>

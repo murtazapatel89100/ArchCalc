@@ -30,6 +30,12 @@ export interface GroupRow {
 }
 
 export interface QuoteInputs {
+  /**
+   * Simple quote: only the core costs (group rows, materials and the builder's basic fields),
+   * leaving out detailed fields such as power draw and all overheads. Saved overheads are kept,
+   * so switching back restores them. Optional: older quotes are detailed.
+   */
+  simple?: boolean;
   fields: Record<string, number>;
   /** Rows per builder group key. Optional: quotes saved before groups existed don't have it. */
   groups?: Record<string, GroupRow[]>;

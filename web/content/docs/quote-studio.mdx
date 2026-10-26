@@ -7,15 +7,34 @@ Quote Studio is ArchCalc's cost and quotation builder. Pick a builder tile for t
 
 <Video src="/videos/clip-quote-studio.mp4" title="Quote Studio walkthrough" />
 
+## Simple and detailed quotes
+
+The **Quote type** switch at the top of every quote picks how much detail goes into the price:
+
+- **Simple** — just the core costs: the builder's rows (filaments, fabrics, work items…), its basic settings and raw materials, then profit, discount and tax. Use it for a quick everyday quotation. For 3D printing and baking the order quantity is worked out for you: **plates × items per plate** (plus any partial plate) or **batches × pieces per batch**.
+- **Detailed** — everything in Simple plus utilities, labour and the **Overheads & utilities** card. You type the order quantity yourself, and ArchCalc shows how many **extra** items your plates or batches make (spares or waste) — or warns you when they make too few.
+
+Switching to Simple hides the extra inputs rather than deleting them, so switching back to Detailed brings your power draw, labour and overheads back exactly as they were. The breakdown and every export (PDF, Word, Markdown, Excel and CSV) follow the quote type. New quotes start as Detailed.
+
+| Builder | Left out of a simple quote |
+| :--- | :--- |
+| **3D Print Costing** | Print time, printer watts, electricity rate, failure allowance |
+| **Freelance / Services** | Revisions |
+| **Home Bakery & Food** | Oven/gas and labour per batch |
+| **Events & Catering** | Serving staff |
+| Every builder | Overheads & utilities |
+
+Tailoring, crafts, printing and painting have no extra settings of their own — their stitching, additive, binding and labour inputs are the core cost of the job — so for them Simple only leaves out overheads.
+
 ## Builders
 
 Each builder has its own inputs for the **base cost** of one unit. Most builders have a **list of rows** for the things that vary — several filament spools, fabrics or wall surfaces — plus a few **settings** that apply to the whole quote. Everything else (materials, overheads, profit, discount, tax and notes) is shared.
 
 | Builder | One unit is | Rows (add as many as you need) | Settings |
 | :--- | :--- | :--- | :--- |
-| **3D Print Costing** | item | **Filaments** — spool price, spool weight, grams used per plate | Items per plate, print time, printer watts, electricity rate, failure allowance |
+| **3D Print Costing** | item | **Filaments** — spool price, spool weight, grams used per plate | Items per plate, plates, items on a partial plate, print time, printer watts, electricity rate, failure allowance |
 | **Freelance / Services** | project | **Work items** — hours × hourly rate | Revision rounds, hours per revision, revision rate |
-| **Home Bakery & Food** | piece | Ingredients (per batch) under raw materials | Pieces per batch, oven/gas and labour per batch |
+| **Home Bakery & Food** | piece | Ingredients (per batch) under raw materials | Pieces per batch, batches, pieces in a smaller batch, oven/gas and labour per batch |
 | **Tailoring & Stitching** | garment | **Fabrics** — metres × price per metre | Lining, stitching labour |
 | **Handmade Crafts** | piece | **Base materials** — grams per piece × price per kg | Fragrance/colour load (% of total weight), additive price |
 | **Events & Catering** | plate | **Menu** — cost per plate for each dish | Disposables, serving staff per plate |
@@ -33,7 +52,23 @@ Filament: PLA Basic — Black = 72 g × ₹1.20 ÷ 4 items = ₹21.60
 Filament: Silk Gold         = 24 g × ₹1.60 ÷ 4 items = ₹9.60
 ```
 
-Machine electricity (`hours × watts ÷ 1000 × rate per kWh ÷ items`) and the failure allowance (a % of filament + electricity) are added on top. A keyring at ₹4 is added as a raw material.
+Machine electricity (`hours × watts ÷ 1000 × rate per kWh ÷ items`) and the failure allowance (a % of filament + electricity) are added on top in a detailed quote. A keyring at ₹4 is added as a raw material.
+
+### Example: plates and order quantity
+
+Plates don't change the price of one item — that comes from one plate's filament and time ÷ items per plate. They set how many items you make:
+
+```text
+Simple:    3 plates × 4 per plate      → order quantity 12 (filled in for you)
+Detailed:  3 plates × 4, 10 ordered   → "makes 12 — 2 extra items (spare or waste)"
+Detailed:  3 plates × 4, 14 ordered   → warning: "makes 12 — 2 short of the order"
+```
+
+When the order doesn't fill the last plate and you'd rather print only what's needed, set **Items on a partial plate**. For 14 items at 3 per plate, enter 4 plates and 2 on a partial plate: `4 plates × 3 per plate + 1 plate of 2` = 14, with nothing spare. Leave it at 0 when you always print full plates. It works in both quote types and doesn't change the price per item, since filament and print time scale with what's on the plate.
+
+Baking works the same way with **batches × pieces per batch** and **pieces in a smaller batch**. Quotes saved before plates and batches existed get just enough for their saved order quantity, so their price doesn't change.
+
+![A simple 3D print quote: no power or overhead inputs, and the order quantity worked out from plates × items per plate](/images/screens/quote-simple.png)
 
 ![Filaments list with two spools — PLA Basic Black and Silk Gold — and the price breakdown listing each filament](/images/screens/quote-filaments.png)
 

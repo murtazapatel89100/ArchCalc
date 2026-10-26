@@ -10,6 +10,7 @@ import {
 } from "../../../components/ui";
 import { cn } from "../../../utils/cn";
 import type { QuoteBuilder } from "../builders";
+import { fieldsFor, productionFor } from "../groups";
 import { quoteActions } from "../store";
 import type {
   DiscountMode,
@@ -108,8 +109,56 @@ export function QuoteEditor(props: {
     }
   };
 
+  const fields = () => fieldsFor(props.builder, inputs());
+  const production = () => productionFor(props.builder, inputs());
+  const unit = () => props.builder.unitLabel;
+  const quantityHint = () => {
+    const p = production();
+    if (!p) return undefined;
+    if (inputs().simple) return `${p.explain}.`;
+    if (p.short) return `${p.explain} makes ${p.made} — ${p.short} short.`;
+    return p.spare
+      ? `${p.explain} makes ${p.made} — ${p.spare} extra ${unit()}${p.spare === 1 ? "" : "s"} (spare or waste).`
+      : `${p.explain} makes exactly ${p.made}.`;
+  };
+  const typeButton = (simple: boolean, label: string) => (
+    <button
+      type="button"
+      aria-pressed={!!inputs().simple === simple}
+      onClick={() =>
+        update((q) => {
+          q.inputs.simple = simple;
+        })
+      }
+      class={cn(
+        "flex-1 py-1.5 px-3 rounded-md text-sm font-medium transition-colors",
+        !!inputs().simple === simple
+          ? "bg-[var(--color-app-accent)] text-white shadow-sm"
+          : "text-[var(--color-app-text-secondary)] hover:text-[var(--color-app-text-primary)]",
+      )}
+    >
+      {label}
+    </button>
+  );
+
   return (
     <div class="@container flex flex-col gap-4 min-w-0">
+      <section class="bg-[var(--color-app-surface)] border border-[var(--color-app-border)] rounded-xl px-5 py-4 flex flex-wrap items-center justify-between gap-3">
+        <div>
+          <h3 class="text-sm font-semibold">Quote type</h3>
+          <p class="text-xs text-[var(--color-app-text-secondary)] mt-0.5">
+            {inputs().simple
+              ? "Simple: just the core costs — no utilities, labour or overheads."
+              : "Detailed: utilities, labour and overheads on top of the core costs."}
+          </p>
+        </div>
+        <fieldset class="m-0 min-w-0 flex gap-1 p-1 rounded-lg bg-[var(--color-app-surface-secondary)] border border-[var(--color-app-border)] shrink-0">
+          <legend class="sr-only">Quote type</legend>
+          {typeButton(true, "Simple")}
+          {typeButton(false, "Detailed")}
+        </fieldset>
+      </section>
+
       <For each={props.builder.groups ?? []}>
         {(group) => (
           <Card
@@ -218,33 +267,35 @@ export function QuoteEditor(props: {
         )}
       </For>
 
-      <Card
-        title={props.builder.groups?.length ? "Settings" : props.builder.name}
-        description={
-          props.builder.groups?.length
-            ? "Values that apply to the whole quote."
-            : "Base cost inputs"
-        }
-      >
-        <div class="grid grid-cols-1 @md:grid-cols-2 gap-3">
-          <For each={props.builder.fields}>
-            {(fd) => (
-              <Field label={fd.label} hint={fd.hint}>
-                <NumberInput
-                  value={inputs().fields[fd.key] ?? fd.default}
-                  prefix={fd.kind === "currency" ? cur() : undefined}
-                  suffix={fd.kind === "percent" ? "%" : fd.suffix}
-                  onChange={(v) =>
-                    update((q) => {
-                      q.inputs.fields[fd.key] = v;
-                    })
-                  }
-                />
-              </Field>
-            )}
-          </For>
-        </div>
-      </Card>
+      <Show when={fields().length > 0}>
+        <Card
+          title={props.builder.groups?.length ? "Settings" : props.builder.name}
+          description={
+            props.builder.groups?.length
+              ? "Values that apply to the whole quote."
+              : "Base cost inputs"
+          }
+        >
+          <div class="grid grid-cols-1 @md:grid-cols-2 gap-3">
+            <For each={fields()}>
+              {(fd) => (
+                <Field label={fd.label} hint={fd.hint}>
+                  <NumberInput
+                    value={inputs().fields[fd.key] ?? fd.default}
+                    prefix={fd.kind === "currency" ? cur() : undefined}
+                    suffix={fd.kind === "percent" ? "%" : fd.suffix}
+                    onChange={(v) =>
+                      update((q) => {
+                        q.inputs.fields[fd.key] = v;
+                      })
+                    }
+                  />
+                </Field>
+              )}
+            </For>
+          </div>
+        </Card>
+      </Show>
 
       <Card
         title="Raw materials"
@@ -326,81 +377,83 @@ export function QuoteEditor(props: {
         </Show>
       </Card>
 
-      <Card
-        title="Overheads & utilities"
-        description="Electricity, manpower, packaging, rent — as a % of cost or a fixed amount."
-        actions={
-          <Button
-            size="sm"
-            onClick={() =>
-              update((q) => {
-                q.inputs.overheads.push({
-                  id: quoteActions.newLineId(),
-                  name: "",
-                  mode: "percent",
-                  value: 0,
-                });
-              })
-            }
-          >
-            <Plus size={14} /> Add overhead
-          </Button>
-        }
-      >
-        <Show
-          when={inputs().overheads.length > 0}
-          fallback={<EmptyRows text="No overheads." />}
+      <Show when={!inputs().simple}>
+        <Card
+          title="Overheads & utilities"
+          description="Electricity, manpower, packaging, rent — as a % of cost or a fixed amount."
+          actions={
+            <Button
+              size="sm"
+              onClick={() =>
+                update((q) => {
+                  q.inputs.overheads.push({
+                    id: quoteActions.newLineId(),
+                    name: "",
+                    mode: "percent",
+                    value: 0,
+                  });
+                })
+              }
+            >
+              <Plus size={14} /> Add overhead
+            </Button>
+          }
         >
-          <div class="flex flex-col gap-2">
-            <For each={inputs().overheads}>
-              {(o, i) => (
-                <div class="grid grid-cols-[minmax(0,1fr)_8.5rem_7rem_2rem] gap-2 items-center">
-                  <input
-                    value={o.name}
-                    placeholder="e.g. Electricity"
-                    aria-label="Overhead name"
-                    class={inputClass}
-                    onInput={(e) => {
-                      const v = e.currentTarget.value;
-                      update((q) => {
-                        q.inputs.overheads[i()].name = v;
-                      });
-                    }}
-                  />
-                  <Select
-                    aria-label="Overhead type"
-                    value={o.mode}
-                    options={overheadModes}
-                    onChange={(v) =>
-                      update((q) => {
-                        q.inputs.overheads[i()].mode = v;
-                      })
-                    }
-                  />
-                  <NumberInput
-                    aria-label="Overhead value"
-                    value={o.value}
-                    prefix={o.mode === "percent" ? undefined : cur()}
-                    suffix={o.mode === "percent" ? "%" : undefined}
-                    onChange={(v) =>
-                      update((q) => {
-                        q.inputs.overheads[i()].value = v;
-                      })
-                    }
-                  />
-                  <RemoveButton
-                    onClick={() =>
-                      update((q) => {
-                        q.inputs.overheads.splice(i(), 1);
-                      })
-                    }
-                  />
-                </div>
-              )}
-            </For>
-          </div>
-        </Show>
-      </Card>
+          <Show
+            when={inputs().overheads.length > 0}
+            fallback={<EmptyRows text="No overheads." />}
+          >
+            <div class="flex flex-col gap-2">
+              <For each={inputs().overheads}>
+                {(o, i) => (
+                  <div class="grid grid-cols-[minmax(0,1fr)_8.5rem_7rem_2rem] gap-2 items-center">
+                    <input
+                      value={o.name}
+                      placeholder="e.g. Electricity"
+                      aria-label="Overhead name"
+                      class={inputClass}
+                      onInput={(e) => {
+                        const v = e.currentTarget.value;
+                        update((q) => {
+                          q.inputs.overheads[i()].name = v;
+                        });
+                      }}
+                    />
+                    <Select
+                      aria-label="Overhead type"
+                      value={o.mode}
+                      options={overheadModes}
+                      onChange={(v) =>
+                        update((q) => {
+                          q.inputs.overheads[i()].mode = v;
+                        })
+                      }
+                    />
+                    <NumberInput
+                      aria-label="Overhead value"
+                      value={o.value}
+                      prefix={o.mode === "percent" ? undefined : cur()}
+                      suffix={o.mode === "percent" ? "%" : undefined}
+                      onChange={(v) =>
+                        update((q) => {
+                          q.inputs.overheads[i()].value = v;
+                        })
+                      }
+                    />
+                    <RemoveButton
+                      onClick={() =>
+                        update((q) => {
+                          q.inputs.overheads.splice(i(), 1);
+                        })
+                      }
+                    />
+                  </div>
+                )}
+              </For>
+            </div>
+          </Show>
+        </Card>
+      </Show>
 
       <Card title="Pricing" description="Profit, order size, discount and tax.">
         <div class="grid grid-cols-1 @md:grid-cols-2 gap-3">
@@ -430,15 +483,27 @@ export function QuoteEditor(props: {
               }
             />
           </Field>
-          <Field label={`Order quantity (${props.builder.unitLabel}s)`}>
-            <NumberInput
-              value={inputs().quantity}
-              onChange={(v) =>
-                update((q) => {
-                  q.inputs.quantity = v;
-                })
+          <Field label={`Order quantity (${unit()}s)`} hint={quantityHint()}>
+            <Show
+              when={!(inputs().simple && production())}
+              fallback={
+                <output
+                  aria-label="Order quantity"
+                  class={cn(inputClass, "block tabular-nums opacity-80")}
+                >
+                  {Math.max(1, production()?.made ?? 1)}
+                </output>
               }
-            />
+            >
+              <NumberInput
+                value={inputs().quantity}
+                onChange={(v) =>
+                  update((q) => {
+                    q.inputs.quantity = v;
+                  })
+                }
+              />
+            </Show>
           </Field>
           <Field label="Price rounding">
             <Select

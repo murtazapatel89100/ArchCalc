@@ -1,5 +1,7 @@
 import { v4 as uuidv4 } from "uuid";
 import type {
+  BaseLine,
+  FieldDef,
   GroupDef,
   GroupRowInit,
   GroupTotals,
@@ -51,6 +53,61 @@ export function groupTotals(
   };
 }
 
+/** The builder's single-value fields this quote uses: simple quotes hide detailed ones. */
+export const fieldsFor = (
+  builder: QuoteBuilder,
+  inputs: QuoteInputs,
+): FieldDef[] =>
+  inputs.simple ? builder.fields.filter((fd) => !fd.detailed) : builder.fields;
+
+/**
+ * The builder's extra base-cost lines this quote prices, each with its index in `baseCost`
+ * (and so in `baseFormulas`). Simple quotes leave out detailed lines.
+ */
+export function extraLinesFor(
+  builder: QuoteBuilder,
+  inputs: QuoteInputs,
+): { line: BaseLine; index: number }[] {
+  return builder
+    .baseCost(inputs.fields, groupTotals(builder, inputs))
+    .map((line, index) => ({ line, index }))
+    .filter(({ line }) => !(inputs.simple && line.detailed));
+}
+
+/**
+ * Inputs as priced: simple quotes ignore their (kept) overheads and, when the builder makes a
+ * known number of units (plates × items per plate), order exactly that many.
+ */
+export function pricedInputs(
+  builder: QuoteBuilder,
+  inputs: QuoteInputs,
+): QuoteInputs {
+  if (!inputs.simple) return inputs;
+  return {
+    ...inputs,
+    overheads: [],
+    quantity: builder.produces
+      ? Math.max(1, Math.floor(num(builder.produces.units(inputs.fields))))
+      : inputs.quantity,
+  };
+}
+
+/**
+ * Units the inputs make against the order quantity, for builders that know it: how many spare
+ * units a detailed quote will have, or how many it is short.
+ */
+export function productionFor(builder: QuoteBuilder, inputs: QuoteInputs) {
+  if (!builder.produces) return undefined;
+  const made = Math.floor(num(builder.produces.units(inputs.fields)));
+  const ordered = pricedInputs(builder, inputs).quantity;
+  return {
+    made,
+    explain: builder.produces.explain(inputs.fields),
+    spare: Math.max(0, made - ordered),
+    short: Math.max(0, ordered - made),
+  };
+}
+
 /** One base-cost line per group row, followed by the builder's other lines. */
 export function baseLinesFor(
   builder: QuoteBuilder,
@@ -64,7 +121,10 @@ export function baseLinesFor(
   );
   return [
     ...rows,
-    ...builder.baseCost(inputs.fields, groupTotals(builder, inputs)),
+    ...extraLinesFor(builder, inputs).map(({ line }) => ({
+      label: line.label,
+      amount: line.amount,
+    })),
   ];
 }
 
@@ -86,9 +146,7 @@ export function normalizeInputs(
   );
   if (!missingField && !missingGroup) return inputs;
 
-  const migrated = missingGroup
-    ? builder.migrate?.(inputs.fields ?? {})
-    : undefined;
+  const migrated = builder.migrate?.(inputs.fields ?? {}, num(inputs.quantity));
   // Saved values win, then values derived from old fields, then defaults.
   const fields = {
     ...Object.fromEntries(builder.fields.map((fd) => [fd.key, fd.default])),
@@ -98,7 +156,7 @@ export function normalizeInputs(
   const groups: Record<string, GroupRow[]> = { ...inputs.groups };
   for (const g of builder.groups ?? []) {
     if (groups[g.key]) continue;
-    const fromOld = migrated?.groups[g.key];
+    const fromOld = migrated?.groups?.[g.key];
     groups[g.key] = toRows(fromOld?.length ? fromOld : g.defaults);
   }
   return { ...inputs, fields, groups };

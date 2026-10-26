@@ -415,7 +415,7 @@ async function tour(page, marks) {
     await click(page.getByLabel("Unit cost").last());
     await page.keyboard.press("Control+A");
     await type("3");
-    await click(page.getByLabel("Quantity").last());
+    await click(page.getByLabel("Quantity", { exact: true }).last());
     await page.keyboard.press("Control+A");
     await type("2");
     await wait(700);
@@ -435,6 +435,25 @@ async function tour(page, marks) {
     await type("45");
     await wait(1200);
     await shot("quote-editor");
+    const plates = page
+      .locator("label")
+      .filter({ has: page.locator("span", { hasText: /^Plates$/ }) })
+      .locator("input")
+      .first();
+    await click(page.getByRole("button", { name: "Simple", exact: true }), 900);
+    await page
+      .locator("section", { hasText: "Values that apply to the whole quote." })
+      .evaluate((el) => el.scrollIntoView({ behavior: "smooth", block: "start" }));
+    await wait(900);
+    await click(plates);
+    await page.keyboard.press("Control+A");
+    await type("3");
+    await wait(1200);
+    await shot("quote-simple");
+    await click(plates);
+    await page.keyboard.press("Control+A");
+    await type("1");
+    await click(page.getByRole("button", { name: "Detailed", exact: true }), 700);
 
     await click(page.getByLabel("Quote name"));
     await page.keyboard.press("Control+A");

@@ -77,7 +77,7 @@ Everything stays on the user's machine.
 features/quotes/
 ├── types.ts        # Product → Quote → QuoteInputs (fields, groups, materials, overheads, pricing)
 ├── builders.ts     # The builder registry: fields, repeatable groups, cost maths + spreadsheet formulas
-├── groups.ts       # Group rows: totals, per-row cost lines, upgrading quotes saved by older versions
+├── groups.ts       # Group rows: totals, per-row cost lines, simple vs detailed quotes, upgrading old quotes
 ├── engine.ts       # computeQuote(): materials, overheads, profit modes, rounding, discount, tax
 ├── result.ts       # resultFor(builder, inputs) — ties a builder's base cost to the engine
 ├── store.ts        # Products in a fine-grained Solid store, persisted to localStorage
@@ -99,16 +99,17 @@ How a price is calculated:
 
 1. **Base cost per unit** = one line per group row (e.g. each filament spool) + the builder's other lines (electricity, labour…). See `baseLinesFor()` in `groups.ts`.
 2. `computeQuote()` adds raw materials and overheads, applies the profit method and rounding, then the order quantity, discount and tax.
-3. The UI, every export and the spreadsheet read from the same result, so they always agree.
+3. A **simple** quote (`inputs.simple`) prices only the core costs: `fieldsFor()` hides fields marked `detailed`, `extraLinesFor()` drops `detailed` base lines and `pricedInputs()` ignores overheads. The hidden values stay saved, so switching back to detailed restores them.
+4. The UI, every export and the spreadsheet read from the same result, so they always agree.
 
 The store keeps products in a Solid `createStore` so editing one field updates only that field (inputs keep focus). Quotes from older versions are upgraded on load by `normalizeInputs()` — for example a single-spool 3D print quote becomes a one-row Filaments list with the same price.
 
 ### Adding a Quote Studio builder
 
 1. Add an entry to `builders` in `builders.ts`:
-   - `fields` — single-value inputs (`currency`, `number` with a `suffix`, or `percent`).
+   - `fields` — single-value inputs (`currency`, `number` with a `suffix`, or `percent`). Mark extras such as power draw or labour `detailed: true` so simple quotes leave them out.
    - `groups` (optional) — repeatable rows, each with its own `fields`, `defaults`, a `rowCost` function and the same maths as a spreadsheet `rowFormula`.
-   - `baseCost` — any other per-unit cost lines, and `baseFormulas` — the same lines as Excel formulas, in the same order.
+   - `baseCost` — any other per-unit cost lines, and `baseFormulas` — the same lines as Excel formulas, in the same order. A line that uses detailed fields must be marked `detailed` too; the sheet export throws if a simple quote would reference a hidden field.
    - `defaults` for materials, overheads and profit; `unitLabel` (e.g. `"item"`, `"plate"`).
 2. Run `pnpm test`. `export/sheet.test.ts` recalculates every builder's spreadsheet formulas and fails if they disagree with `rowCost` / `baseCost`.
 3. If you change the shape of an existing builder, add a `migrate` function so quotes saved by earlier versions keep their numbers, and a test for it.
