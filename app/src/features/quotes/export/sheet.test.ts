@@ -34,7 +34,7 @@ const { buildExportDoc } = await import("./document");
 const { resultFor } = await import("../result");
 const { defaultInputs, defaultQuoteSettings } = await import("../store");
 const { markdownToLines } = await import("./markdown-plain");
-const { normalizeInputs } = await import("../groups");
+const { normalizeInputs, productionFor } = await import("../groups");
 
 /**
  * Evaluate the small subset of Excel used by the sheet: cell refs, + - * / ( ),
@@ -133,20 +133,25 @@ const sheetFor = (
 
 describe("spreadsheet formulas match the pricing engine", () => {
   for (const builder of builders) {
-    it(`${builder.id}: every formula recalculates to the engine's value`, () => {
-      const { model } = sheetFor(builder);
-      const cells = recalc(model.rows);
-      for (const [i, row] of model.rows.entries()) {
-        for (const [c, cell] of row.cells.entries()) {
-          if (!cell?.formula) continue;
-          const ref = `${"ABCDEF"[c]}${i + 1}`;
-          expect(
-            cells.get(ref),
-            `${builder.id} ${ref} =${cell.formula}`,
-          ).toBeCloseTo(cell.value as number, 6);
+    for (const simple of [false, true]) {
+      const kind = simple ? "simple" : "detailed";
+      it(`${builder.id} (${kind}): every formula recalculates to the engine's value`, () => {
+        const { model } = sheetFor(builder, (inp) => {
+          inp.simple = simple;
+        });
+        const cells = recalc(model.rows);
+        for (const [i, row] of model.rows.entries()) {
+          for (const [c, cell] of row.cells.entries()) {
+            if (!cell?.formula) continue;
+            const ref = `${"ABCDEF"[c]}${i + 1}`;
+            expect(
+              cells.get(ref),
+              `${builder.id} ${ref} =${cell.formula}`,
+            ).toBeCloseTo(cell.value as number, 6);
+          }
         }
-      }
-    });
+      });
+    }
   }
 
   it("covers every profit mode, rounding mode and per-order overheads", () => {
@@ -349,6 +354,146 @@ describe("dynamic groups", () => {
           );
         }
       }
+    }
+  });
+});
+
+describe("simple quotes, plates and batches", () => {
+  const print3d = () => {
+    const b = builders.find((x) => x.id === "print3d");
+    if (!b) throw new Error("print3d builder missing");
+    return b;
+  };
+  const onePlate = (inp: ReturnType<typeof defaultInputs>) => {
+    inp.groups = {
+      filaments: [
+        {
+          id: "a",
+          name: "Black",
+          values: { spoolPrice: 1200, spoolWeight: 1000, grams: 80 },
+        },
+      ],
+    };
+  };
+  const cellText = (model: ReturnType<typeof buildSheet>) =>
+    model.rows.flatMap((r) => r.cells.map((c) => String(c?.value ?? "")));
+
+  it("leaves out power, failure and overheads but keeps their values", () => {
+    const { model, result } = sheetFor(print3d(), (inp) => {
+      onePlate(inp);
+      inp.simple = true;
+    });
+    // 80 g × ₹1.2 / 4 items = ₹24 filament + ₹4 keyring, nothing else.
+    expect(result.baseLines.map((l) => l.label)).toEqual(["Filament: Black"]);
+    expect(result.overheadLines).toEqual([]);
+    expect(result.costPerUnit).toBeCloseTo(28, 9);
+    const labels = cellText(model);
+    expect(labels).not.toContain("Printer power draw (W)");
+    expect(labels).not.toContain("Overheads (per item)");
+    expect(labels).toContain("Plates");
+
+    // Switching back prices the kept overheads again.
+    const detailed = sheetFor(print3d(), onePlate).result;
+    expect(detailed.overheadLines.length).toBeGreaterThan(0);
+    expect(detailed.costPerUnit).toBeGreaterThan(result.costPerUnit);
+  });
+
+  it("orders plates × items per plate in a simple quote", () => {
+    const { model, result } = sheetFor(print3d(), (inp) => {
+      onePlate(inp);
+      inp.simple = true;
+      inp.quantity = 99; // ignored: a simple quote orders what the plates make
+      inp.fields.plates = 3;
+    });
+    expect(result.quantity).toBe(12);
+    // Plates don't change the price per item, only how many are ordered.
+    expect(result.costPerUnit).toBeCloseTo(28, 9);
+    const cells = recalc(model.rows);
+    const qtyRow = model.rows.findIndex((r) =>
+      String(r.cells[0]?.value).startsWith("Order quantity"),
+    );
+    expect(model.rows[qtyRow].cells[1]?.formula).toBeTruthy();
+    expect(cells.get(`B${qtyRow + 1}`)).toBe(12);
+    for (const [i, row] of model.rows.entries()) {
+      for (const [c, cell] of row.cells.entries()) {
+        if (cell?.formula) {
+          expect(cells.get(`${"ABCDEF"[c]}${i + 1}`)).toBeCloseTo(
+            cell.value as number,
+            6,
+          );
+        }
+      }
+    }
+  });
+
+  it("adds a partly filled last plate in both quote types", () => {
+    const inputs = defaultInputs(print3d(), 0);
+    Object.assign(inputs.fields, {
+      itemsPerPlate: 3,
+      plates: 4,
+      partialPlate: 2,
+    });
+    inputs.quantity = 14;
+    // Detailed: 4 × 3 + 2 = 14 covers the order exactly.
+    expect(productionFor(print3d(), inputs)).toMatchObject({
+      made: 14,
+      spare: 0,
+      short: 0,
+      explain: "4 plates × 3 per plate + 1 plate of 2",
+    });
+    // Simple: the partial plate is part of the order quantity, and the sheet agrees.
+    const { model, result } = sheetFor(print3d(), (inp) => {
+      inp.simple = true;
+      Object.assign(inp.fields, inputs.fields);
+    });
+    expect(result.quantity).toBe(14);
+    const cells = recalc(model.rows);
+    for (const [i, row] of model.rows.entries()) {
+      for (const [c, cell] of row.cells.entries()) {
+        if (cell?.formula) {
+          expect(cells.get(`${"ABCDEF"[c]}${i + 1}`)).toBeCloseTo(
+            cell.value as number,
+            6,
+          );
+        }
+      }
+    }
+  });
+
+  it("shows spare items or a shortfall in a detailed quote", () => {
+    const inputs = defaultInputs(print3d(), 0);
+    inputs.fields.plates = 3;
+    inputs.quantity = 10;
+    expect(productionFor(print3d(), inputs)).toMatchObject({
+      made: 12,
+      spare: 2,
+      short: 0,
+    });
+    expect(resultFor(print3d(), inputs).quantity).toBe(10);
+    expect(resultFor(print3d(), inputs).warnings).toEqual([]);
+
+    inputs.quantity = 14;
+    expect(productionFor(print3d(), inputs)?.short).toBe(2);
+    expect(resultFor(print3d(), inputs).warnings).toContain(
+      "3 plates × 4 per plate makes 12 — 2 short of the order.",
+    );
+  });
+
+  it("gives older quotes enough plates or batches for their order, at the same price", () => {
+    for (const [id, key, quantity, expected] of [
+      ["print3d", "plates", 10, 3],
+      ["bakery", "batches", 30, 3],
+    ] as const) {
+      const b = builders.find((x) => x.id === id);
+      if (!b) throw new Error(`${id} builder missing`);
+      const inputs = defaultInputs(b, 0);
+      inputs.quantity = quantity;
+      const before = resultFor(b, inputs).total;
+      delete inputs.fields[key];
+      const upgraded = normalizeInputs(b, inputs);
+      expect(upgraded.fields[key]).toBe(expected);
+      expect(resultFor(b, upgraded).total).toBeCloseTo(before, 9);
+      expect(resultFor(b, upgraded).warnings).toEqual([]);
     }
   });
 });

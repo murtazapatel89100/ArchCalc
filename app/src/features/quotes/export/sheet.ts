@@ -1,7 +1,14 @@
 import type { FieldKind, QuoteBuilder } from "../builders";
 import { num } from "../engine";
 import { currencySymbol } from "../format";
-import { groupRows, groupTotals, rowCost } from "../groups";
+import {
+  extraLinesFor,
+  fieldsFor,
+  groupRows,
+  groupTotals,
+  pricedInputs,
+  rowCost,
+} from "../groups";
 import type { Product, Quote, QuoteResult, QuoteSettings } from "../types";
 import type { ExportDoc } from "./document";
 import { markdownToLines } from "./markdown-plain";
@@ -98,7 +105,7 @@ export function buildSheet(
     amount: SheetCell | null = null,
   ) => pushWide(kind, a, b, c, null, null, amount);
   const ref = (col: (typeof COLS)[number], row: number) => `${col}${row}`;
-  const inputs = quote.inputs;
+  const inputs = pricedInputs(builder, quote.inputs);
   const unit = builder.unitLabel;
   const totals = groupTotals(builder, inputs);
 
@@ -162,7 +169,7 @@ export function buildSheet(
   // --- Builder inputs -------------------------------------------------------------------------
   push("section", text(`${builder.name} settings`));
   const fieldRow = new Map<string, number>();
-  for (const fd of builder.fields) {
+  for (const fd of fieldsFor(builder, inputs)) {
     const label = fd.suffix ? `${fd.label} (${fd.suffix})` : fd.label;
     fieldRow.set(
       fd.key,
@@ -176,11 +183,25 @@ export function buildSheet(
   push("blank");
 
   // --- Groups (spools, fabrics, surfaces…) ----------------------------------------------------
+  // Formulas of lines a simple quote drops still get built; they may name hidden detailed
+  // fields and lines, which must never reach a priced cell.
+  const HIDDEN = "#HIDDEN";
   const fieldRef = (key: string) => {
     const r = fieldRow.get(key);
-    if (!r) throw new Error(`Unknown field ${key} in ${builder.id} formulas`);
-    return ref("B", r);
+    if (r) return ref("B", r);
+    if (builder.fields.some((fd) => fd.key === key && fd.detailed)) {
+      return HIDDEN;
+    }
+    throw new Error(`Unknown field ${key} in ${builder.id} formulas`);
   };
+  // Simple quotes order exactly what the inputs make, so the quantity follows them live.
+  if (inputs.simple && builder.produces) {
+    rows[qtyRow - 1].cells[1] = {
+      value: result.quantity,
+      formula: builder.produces.formula(fieldRef),
+      format: "number",
+    };
+  }
   const groupCostRef = new Map<string, string>();
   const groupRange = new Map<string, { start: number; end: number }>();
   const groupCols = new Map<string, Map<string, (typeof COLS)[number]>>();
@@ -241,11 +262,18 @@ export function buildSheet(
     });
   }
   const extraStart = rows.length + 1;
-  const extraLines = builder.baseCost(inputs.fields, totals);
+  const extraLines = extraLinesFor(builder, inputs);
+  // Row of each priced line by its `baseCost` index; simple quotes skip detailed lines.
+  const lineRow = new Map(
+    extraLines.map(({ index }, i) => [index, extraStart + i]),
+  );
   const formulas = builder.baseFormulas(
     fieldRef,
     // Extra lines are laid out consecutively from extraStart, so later lines can refer back.
-    (i) => ref(AMT, extraStart + i),
+    (i) => {
+      const r = lineRow.get(i);
+      return r ? ref(AMT, r) : HIDDEN;
+    },
     {
       cost: (key) => groupCostRef.get(key) ?? "0",
       sum: (key, field) => {
@@ -257,13 +285,18 @@ export function buildSheet(
       },
     },
   );
-  extraLines.forEach((line, i) => {
+  for (const { line, index } of extraLines) {
+    if (formulas[index].includes(HIDDEN)) {
+      throw new Error(
+        `${builder.id} line "${line.label}" uses a detailed field or line`,
+      );
+    }
     push("row", text(line.label), null, null, {
       value: line.amount,
-      formula: formulas[i],
+      formula: formulas[index],
       format: "money",
     });
-  });
+  }
   const baseSub = push("subtotal", text("Base cost"), null, null, {
     value: result.baseCost,
     formula:
@@ -312,43 +345,52 @@ export function buildSheet(
   });
   push("blank");
 
-  // --- Overheads -------------------------------------------------------------------------------
-  push("section", text(`Overheads (per ${unit})`));
-  push("header", text("Name"), text("Type"), text("Value"), text("Amount"));
-  const ovStart = rows.length + 1;
-  inputs.overheads.forEach((o, i) => {
-    const r = rows.length + 1;
-    const v = ref("C", r);
-    const formula =
-      o.mode === "percent"
-        ? `${v}/100*(${ref(AMT, baseSub)}+${ref(AMT, matSub)})`
-        : o.mode === "per_order"
-          ? `${v}/${qty}`
-          : v;
-    push(
-      "row",
-      text(o.name || "Overhead"),
-      text(
+  // --- Overheads (left out of simple quotes) ---------------------------------------------------
+  let ovSub: number | undefined;
+  if (!inputs.simple) {
+    push("section", text(`Overheads (per ${unit})`));
+    push("header", text("Name"), text("Type"), text("Value"), text("Amount"));
+    const ovStart = rows.length + 1;
+    inputs.overheads.forEach((o, i) => {
+      const r = rows.length + 1;
+      const v = ref("C", r);
+      const formula =
         o.mode === "percent"
-          ? "% of cost"
+          ? `${v}/100*(${ref(AMT, baseSub)}+${ref(AMT, matSub)})`
           : o.mode === "per_order"
-            ? "Fixed per order"
-            : "Fixed per item",
-      ),
-      {
-        value: o.value,
-        format: o.mode === "percent" ? "percent" : "money",
-        input: true,
-      },
-      { value: result.overheadLines[i]?.amount ?? 0, formula, format: "money" },
-    );
-  });
-  const ovSub = push("subtotal", text("Overheads"), null, null, {
-    value: result.overheadsCost,
-    formula: inputs.overheads.length ? `SUM(F${ovStart}:F${rows.length})` : "0",
-    format: "money",
-  });
-  push("blank");
+            ? `${v}/${qty}`
+            : v;
+      push(
+        "row",
+        text(o.name || "Overhead"),
+        text(
+          o.mode === "percent"
+            ? "% of cost"
+            : o.mode === "per_order"
+              ? "Fixed per order"
+              : "Fixed per item",
+        ),
+        {
+          value: o.value,
+          format: o.mode === "percent" ? "percent" : "money",
+          input: true,
+        },
+        {
+          value: result.overheadLines[i]?.amount ?? 0,
+          formula,
+          format: "money",
+        },
+      );
+    });
+    ovSub = push("subtotal", text("Overheads"), null, null, {
+      value: result.overheadsCost,
+      formula: inputs.overheads.length
+        ? `SUM(F${ovStart}:F${rows.length})`
+        : "0",
+      format: "money",
+    });
+    push("blank");
+  }
 
   // --- Summary --------------------------------------------------------------------------------
   push("section", text("Summary"));
@@ -360,7 +402,10 @@ export function buildSheet(
     null,
     {
       value: result.costPerUnit,
-      formula: `${C(baseSub)}+${C(matSub)}+${C(ovSub)}`,
+      formula: [baseSub, matSub, ovSub]
+        .filter((r) => r !== undefined)
+        .map(C)
+        .join("+"),
       format: "money",
       bold: true,
     },

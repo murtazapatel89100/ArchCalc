@@ -1,7 +1,7 @@
 import type { FieldDef, QuoteBuilder } from "../builders";
 import { num } from "../engine";
 import { formatMoney, formatNumber, formatPercent } from "../format";
-import { groupRows, rowLabel } from "../groups";
+import { fieldsFor, groupRows, rowLabel } from "../groups";
 import type { Product, Quote, QuoteResult, QuoteSettings } from "../types";
 
 export interface Row {
@@ -124,7 +124,7 @@ export function buildExportDoc(
     );
     doc.inputs = [
       ...groupInputs,
-      ...builder.fields.map((fd) => ({
+      ...fieldsFor(builder, quote.inputs).map((fd) => ({
         label: fd.label,
         value: show(fd, quote.inputs.fields[fd.key] ?? fd.default),
       })),
