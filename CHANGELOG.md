@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.5.0](https://github.com/murtazapatel89100/ArchCalc/compare/archcalc-v1.4.0...archcalc-v1.5.0) (2026-10-26)
+
+
+### Features
+
+* **app:** simple and detailed quotes with plate and batch counts ([#20](https://github.com/murtazapatel89100/ArchCalc/issues/20)) ([41f83de](https://github.com/murtazapatel89100/ArchCalc/commit/41f83de8c1c1a99f85403cb1ee318f1e4d3a602e))
+
 ## [1.4.0](https://github.com/murtazapatel89100/ArchCalc/compare/archcalc-v1.3.0...archcalc-v1.4.0) (2026-10-25)
 
 
