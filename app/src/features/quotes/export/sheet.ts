@@ -907,11 +907,19 @@ const csvCell = (cell: SheetCell | null) => {
   return /[",\n]/.test(v) ? `"${v.replace(/"/g, '""')}"` : v;
 };
 
-/** Values only (CSV has no formulas or styling); notes are appended at the end. */
+/**
+ * Values only (CSV has no formulas or styling). Extra sheets (each quote of a client order)
+ * follow the main one under their name; notes are appended at the end.
+ */
 export function renderCsv(model: SheetModel): Uint8Array {
-  const lines = model.rows.map((row) =>
-    [0, 1, 2, 3, 4, 5].map((c) => csvCell(row.cells[c] ?? null)).join(","),
-  );
+  const rowLines = (rows: SheetRow[]) =>
+    rows.map((row) =>
+      [0, 1, 2, 3, 4, 5].map((c) => csvCell(row.cells[c] ?? null)).join(","),
+    );
+  const lines = rowLines(model.rows);
+  for (const sheet of model.extraSheets) {
+    lines.push("", csvCell(text(sheet.name)), ...rowLines(sheet.rows));
+  }
   for (const sec of model.notes) {
     lines.push("", csvCell(text(sec.title)));
     for (const line of sec.lines) lines.push(csvCell(text(line)));

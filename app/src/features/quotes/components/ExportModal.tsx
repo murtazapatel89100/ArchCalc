@@ -291,12 +291,22 @@ export function ExportModal(props: {
   );
 }
 
-/** Spreadsheet-style preview of the "Quote" sheet, with column letters and row numbers. */
+/**
+ * Spreadsheet-style preview with column letters, row numbers and, when the workbook has more
+ * than one sheet (a client order), Excel-like tabs to switch between them.
+ */
 function SheetPreview(props: {
   model: SheetModel;
   template: ExportTemplate;
   currency: string;
 }) {
+  const sheets = () => [
+    { name: props.model.sheetName, rows: props.model.rows },
+    ...props.model.extraSheets,
+  ];
+  const [active, setActive] = createSignal(0);
+  // Stay on a sheet that exists when quotes are removed from the order.
+  const current = () => sheets()[Math.min(active(), sheets().length - 1)];
   const show = (cell: SheetCell | null) => {
     if (!cell) return "";
     if (typeof cell.value === "string") return cell.value;
@@ -342,6 +352,33 @@ function SheetPreview(props: {
 
   return (
     <div class="bg-white shadow-lg mx-auto w-fit text-[11px] text-neutral-800 font-sans">
+      <Show when={sheets().length > 1}>
+        <div
+          role="tablist"
+          aria-label="Sheets"
+          class="flex flex-wrap gap-px bg-neutral-200 border-b border-neutral-300"
+        >
+          <For each={sheets()}>
+            {(sheet, i) => (
+              <button
+                type="button"
+                role="tab"
+                aria-selected={current() === sheet}
+                onClick={() => setActive(i())}
+                class={cn(
+                  "px-3 py-1.5 text-[11px] max-w-[200px] truncate",
+                  current() === sheet
+                    ? "bg-white font-semibold text-neutral-900"
+                    : "bg-neutral-100 text-neutral-600 hover:bg-neutral-50",
+                )}
+                title={sheet.name}
+              >
+                {sheet.name}
+              </button>
+            )}
+          </For>
+        </div>
+      </Show>
       <table class="border-collapse">
         <thead>
           <tr class="bg-neutral-100 text-neutral-500">
@@ -356,7 +393,7 @@ function SheetPreview(props: {
           </tr>
         </thead>
         <tbody>
-          <For each={props.model.rows}>
+          <For each={current().rows}>
             {(row, i) => (
               <tr style={rowStyle(row.kind)}>
                 <td class="bg-neutral-100 text-neutral-500 text-center border border-neutral-300 px-1">
@@ -375,6 +412,10 @@ function SheetPreview(props: {
                               (row.kind === "header" && c > 0)) &&
                             "text-right",
                           row.kind === "title" && "text-base font-bold",
+                          // Long text (e.g. the list of variants) mustn't stretch the column.
+                          c > 0 &&
+                            typeof cell?.value === "string" &&
+                            "max-w-[220px] truncate",
                           row.kind === "hint" && "italic text-neutral-500",
                           (cell?.bold || cell?.input) && "font-semibold",
                         )}
@@ -384,7 +425,13 @@ function SheetPreview(props: {
                             ? { color: t().accent }
                             : {}),
                         }}
-                        title={cell?.formula ? `=${cell.formula}` : undefined}
+                        title={
+                          cell?.formula
+                            ? `=${cell.formula}`
+                            : typeof cell?.value === "string" && c > 0
+                              ? cell.value
+                              : undefined
+                        }
                       >
                         <Show when={cell?.formula}>
                           <span class="mr-1 text-[9px] italic opacity-50">
@@ -401,12 +448,6 @@ function SheetPreview(props: {
           </For>
         </tbody>
       </table>
-      <Show when={props.model.extraSheets.length}>
-        <p class="px-3 py-2 text-[10px] text-neutral-500 border-t border-neutral-200">
-          + a live sheet per quote:{" "}
-          {props.model.extraSheets.map((s) => `“${s.name}”`).join(", ")}
-        </p>
-      </Show>
       <Show when={props.model.notes.length}>
         <p class="px-3 py-2 text-[10px] text-neutral-500 border-t border-neutral-200">
           + “Notes” sheet with {props.model.notes.length} section
