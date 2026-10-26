@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.6.0](https://github.com/murtazapatel89100/ArchCalc/compare/archcalc-v1.5.0...archcalc-v1.6.0) (2026-10-26)
+
+
+### Features
+
+* **app:** combine quotes into client orders ([#22](https://github.com/murtazapatel89100/ArchCalc/issues/22)) ([00bd6ad](https://github.com/murtazapatel89100/ArchCalc/commit/00bd6ad9783c4fb317fe4a2fbd6f9a4b5ab31751))
+
 ## [1.5.0](https://github.com/murtazapatel89100/ArchCalc/compare/archcalc-v1.4.0...archcalc-v1.5.0) (2026-10-26)
 
 
