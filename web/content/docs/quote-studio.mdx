@@ -147,7 +147,9 @@ A client often orders the same product made in different ways — say keychains 
 
 Saved orders are listed under **Client orders** on the product page. Prices are read live from the quotes, so changing a quote's spool price or quantity updates every order it's in; deleting a quote removes it from its orders.
 
-The export has one line per quote (its quantity × price per unit) and one set of totals. With **Include cost breakdown** on, each quote gets its own breakdown section. The Excel export has a **Summary** sheet plus one live sheet per quote: change a quote's inputs on its sheet and the summary's lines and totals recalculate.
+The export has one line per quote (its quantity × price per unit) and one set of totals. With **Include cost breakdown** on, each quote gets its own breakdown section. The Excel export has a **Summary** sheet plus one live sheet per quote with that quote's full breakdown — filaments, materials, price per item. Change a quote's inputs on its sheet and the summary's lines and totals recalculate. In the export window, use the sheet tabs under the preview to look at each one. **CSV** has the summary followed by each quote's sheet.
+
+![Spreadsheet preview of a client order with the PETG sheet tab open, showing that quote's breakdown](/images/screens/quote-order-sheet.png)
 
 ![Export preview of the combined quote with one line per quote and a single total](/images/screens/quote-order-export.png)
 

@@ -514,6 +514,10 @@ async function tour(page, marks) {
     await shot("quote-order");
     await click(page.getByRole("button", { name: "Export quote" }), 1400);
     await shot("quote-order-export");
+    await click(page.getByRole("button", { name: "Spreadsheet" }), 1000);
+    await click(page.getByRole("tab", { name: "PETG" }), 1200);
+    await shot("quote-order-sheet");
+    await click(page.getByRole("button", { name: "Document" }), 600);
     await click(page.getByText("×", { exact: true }), 600);
     await click(page.getByRole("button", { name: "Each quote's own" }), 1200);
     await click(page.getByRole("button", { name: "One for the order" }), 800);
