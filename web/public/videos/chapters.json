@@ -12,36 +12,36 @@
   {
     "name": "history",
     "start": 27.46,
-    "end": 32.83
+    "end": 32.77
   },
   {
     "name": "workspaces",
-    "start": 32.83,
-    "end": 43.15
+    "start": 32.77,
+    "end": 43.09
   },
   {
     "name": "converters",
-    "start": 43.15,
-    "end": 52.32
+    "start": 43.09,
+    "end": 52.25
   },
   {
     "name": "devtools",
-    "start": 52.32,
-    "end": 63.73
+    "start": 52.25,
+    "end": 63.62
   },
   {
     "name": "system",
-    "start": 63.73,
-    "end": 69.2
+    "start": 63.62,
+    "end": 69.04
   },
   {
     "name": "quote-studio",
-    "start": 69.2,
-    "end": 125.68
+    "start": 69.04,
+    "end": 132.33
   },
   {
     "name": "settings",
-    "start": 125.68,
-    "end": 130.42
+    "start": 132.33,
+    "end": 137.05
   }
 ]
