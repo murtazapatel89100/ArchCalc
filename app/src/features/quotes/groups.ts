@@ -8,7 +8,7 @@ import type {
   QuoteBuilder,
 } from "./builders";
 import { num } from "./engine";
-import type { CostLine, GroupRow, QuoteInputs } from "./types";
+import type { CostLine, GroupRow, OverheadLine, QuoteInputs } from "./types";
 
 // Saved inputs are plain JSON objects, so `in` is a safe own-property check here.
 const hasKey = (obj: object | undefined, key: string) => !!obj && key in obj;
@@ -74,8 +74,23 @@ export function extraLinesFor(
     .filter(({ line }) => !(inputs.simple && line.detailed));
 }
 
+/** The one overhead line a simple quote prices: its combined utilities, if any. */
+export function simpleOverheads(inputs: QuoteInputs): OverheadLine[] {
+  const u = inputs.utilities;
+  if (!u || !num(u.value)) return [];
+  return [
+    {
+      id: "utilities",
+      name: "Utilities & overheads",
+      mode: u.mode === "percent" ? "percent" : "per_order",
+      value: u.value,
+    },
+  ];
+}
+
 /**
- * Inputs as priced: simple quotes ignore their (kept) overheads and, when the builder makes a
+ * Inputs as priced: simple quotes swap their (kept) overheads for the one combined utilities
+ * value and, when the builder makes a
  * known number of units (plates × items per plate), order exactly that many.
  */
 export function pricedInputs(
@@ -85,7 +100,7 @@ export function pricedInputs(
   if (!inputs.simple) return inputs;
   return {
     ...inputs,
-    overheads: [],
+    overheads: simpleOverheads(inputs),
     quantity: builder.produces
       ? Math.max(1, Math.floor(num(builder.produces.units(inputs.fields))))
       : inputs.quantity,

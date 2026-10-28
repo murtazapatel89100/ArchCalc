@@ -418,6 +418,51 @@ describe("simple quotes, plates and batches", () => {
     expect(detailed.costPerUnit).toBeGreaterThan(result.costPerUnit);
   });
 
+  it("prices a simple quote's combined utilities as % of cost or a fixed order amount", () => {
+    // 3 plates → 12 items at ₹28 each before utilities.
+    const simple = (utilities: { mode: "percent" | "fixed"; value: number }) =>
+      sheetFor(print3d(), (inp) => {
+        onePlate(inp);
+        inp.simple = true;
+        inp.fields.plates = 3;
+        inp.utilities = utilities;
+      });
+    const percent = simple({ mode: "percent", value: 10 });
+    expect(percent.result.overheadLines).toEqual([
+      { label: "Utilities & overheads", amount: 2.8 },
+    ]);
+    expect(percent.result.costPerUnit).toBeCloseTo(30.8, 9);
+    // A fixed amount covers the whole order, so it's spread over the 12 items.
+    const fixed = simple({ mode: "fixed", value: 60 });
+    expect(fixed.result.overheadLines[0].amount).toBeCloseTo(5, 9);
+    expect(fixed.result.costPerUnit).toBeCloseTo(33, 9);
+
+    for (const { model, result } of [percent, fixed]) {
+      expect(cellText(model)).toContain("Utilities & overheads");
+      const cells = recalc(model.rows);
+      for (const [i, row] of model.rows.entries()) {
+        for (const [c, cell] of row.cells.entries()) {
+          if (cell?.formula) {
+            expect(cells.get(`${"ABCDEF"[c]}${i + 1}`)).toBeCloseTo(
+              cell.value as number,
+              6,
+            );
+          }
+        }
+      }
+      expect(result.warnings).toEqual([]);
+    }
+
+    // Detailed quotes ignore it and price their own itemised overheads.
+    const detailed = sheetFor(print3d(), (inp) => {
+      onePlate(inp);
+      inp.utilities = { mode: "fixed", value: 60 };
+    }).result;
+    expect(detailed.overheadLines.map((l) => l.label)).not.toContain(
+      "Utilities & overheads",
+    );
+  });
+
   it("orders plates × items per plate in a simple quote", () => {
     const { model, result } = sheetFor(print3d(), (inp) => {
       onePlate(inp);

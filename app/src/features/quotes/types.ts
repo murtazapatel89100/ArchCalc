@@ -36,6 +36,12 @@ export interface QuoteInputs {
    * so switching back restores them. Optional: older quotes are detailed.
    */
   simple?: boolean;
+  /**
+   * Simple quotes only: every utility and overhead cost in one value, as a % of cost or a fixed
+   * amount for the whole order. Detailed quotes itemise them as `overheads` instead.
+   * Optional: quotes saved before it existed have none.
+   */
+  utilities?: { mode: DiscountMode; value: number };
   fields: Record<string, number>;
   /** Rows per builder group key. Optional: quotes saved before groups existed don't have it. */
   groups?: Record<string, GroupRow[]>;

@@ -129,7 +129,7 @@ export function QuoteEditor(props: {
           <h3 class="text-sm font-semibold">Quote type</h3>
           <p class="text-xs text-[var(--color-app-text-secondary)] mt-0.5">
             {inputs().simple
-              ? "Simple: just the core costs — no utilities, labour or overheads."
+              ? "Simple: just the core costs, with utilities and overheads as one amount."
               : "Detailed: utilities, labour and overheads on top of the core costs."}
           </p>
         </div>
@@ -357,6 +357,48 @@ export function QuoteEditor(props: {
           </div>
         </Show>
       </Card>
+
+      <Show when={inputs().simple}>
+        <Card
+          title="Utilities & overheads"
+          description="Electricity, manpower, packaging, rent — all in one, as a % of cost or a fixed amount for the whole order. Detailed quotes list them one by one."
+        >
+          <Field label="Utilities & overheads">
+            <div class="flex gap-2">
+              <Select<DiscountMode>
+                class="w-20 shrink-0"
+                aria-label="Utilities type"
+                value={inputs().utilities?.mode ?? "percent"}
+                options={[
+                  { value: "percent", label: "%" },
+                  { value: "fixed", label: cur() },
+                ]}
+                onChange={(v) =>
+                  update((q) => {
+                    q.inputs.utilities = {
+                      mode: v,
+                      value: q.inputs.utilities?.value ?? 0,
+                    };
+                  })
+                }
+              />
+              <NumberInput
+                class="flex-1"
+                aria-label="Utilities value"
+                value={inputs().utilities?.value ?? 0}
+                onChange={(v) =>
+                  update((q) => {
+                    q.inputs.utilities = {
+                      mode: q.inputs.utilities?.mode ?? "percent",
+                      value: v,
+                    };
+                  })
+                }
+              />
+            </div>
+          </Field>
+        </Card>
+      </Show>
 
       <Show when={!inputs().simple}>
         <Card
