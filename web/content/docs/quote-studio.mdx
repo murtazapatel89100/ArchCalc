@@ -11,8 +11,8 @@ Quote Studio is ArchCalc's cost and quotation builder. Pick a builder tile for t
 
 The **Quote type** switch at the top of every quote picks how much detail goes into the price:
 
-- **Simple** — just the core costs: the builder's rows (filaments, fabrics, work items…), its basic settings and raw materials, then profit, discount and tax. Use it for a quick everyday quotation. For 3D printing and baking the order quantity is worked out for you: **plates × items per plate** (plus any partial plate) or **batches × pieces per batch**.
-- **Detailed** — everything in Simple plus utilities, labour and the **Overheads & utilities** card. You type the order quantity yourself, and ArchCalc shows how many **extra** items your plates or batches make (spares or waste) — or warns you when they make too few.
+- **Simple** — just the core costs: the builder's rows (filaments, fabrics, work items…), its basic settings and raw materials, one optional **Utilities & overheads** amount, then profit, discount and tax. Use it for a quick everyday quotation. For 3D printing and baking the order quantity is worked out for you: **plates × items per plate** (plus any partial plate) or **batches × pieces per batch**.
+- **Detailed** — everything in Simple plus utilities, labour and the **Overheads & utilities** card, where each overhead gets its own line. You type the order quantity yourself, and ArchCalc shows how many **extra** items your plates or batches make (spares or waste) — or warns you when they make too few.
 
 Switching to Simple hides the extra inputs rather than deleting them, so switching back to Detailed brings your power draw, labour and overheads back exactly as they were. The breakdown and every export (PDF, Word, Markdown, Excel and CSV) follow the quote type. New quotes start as Detailed.
 
@@ -22,9 +22,13 @@ Switching to Simple hides the extra inputs rather than deleting them, so switchi
 | **Freelance / Services** | Revisions |
 | **Home Bakery & Food** | Oven/gas and labour per batch |
 | **Events & Catering** | Serving staff |
-| Every builder | Overheads & utilities |
+| Every builder | Itemised overheads (replaced by one **Utilities & overheads** amount) |
 
-Tailoring, crafts, printing and painting have no extra settings of their own — their stitching, additive, binding and labour inputs are the core cost of the job — so for them Simple only leaves out overheads.
+Tailoring, crafts, printing and painting have no extra settings of their own — their stitching, additive, binding and labour inputs are the core cost of the job — so for them Simple only combines their overheads into one amount.
+
+### Utilities & overheads in a simple quote
+
+Instead of listing electricity, manpower, packaging and rent one by one, a simple quote takes them as a single value. Pick **%** to add a share of the cost (base cost + materials), or your currency (e.g. **Rs**) for a fixed amount for the whole order, which is spread across the order quantity. It shows as one **Utilities & overheads** line in the breakdown and every export. Detailed quotes ignore it and use their own itemised overheads, and both values are kept when you switch.
 
 ## Builders
 

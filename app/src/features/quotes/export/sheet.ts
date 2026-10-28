@@ -367,9 +367,9 @@ export function buildSheet(
   });
   push("blank");
 
-  // --- Overheads (left out of simple quotes) ---------------------------------------------------
+  // --- Overheads (simple quotes have at most their one combined utilities line) --------------
   let ovSub: number | undefined;
-  if (!inputs.simple) {
+  if (!inputs.simple || inputs.overheads.length) {
     push("section", text(`Overheads (per ${unit})`));
     push("header", text("Name"), text("Type"), text("Value"), text("Amount"));
     const ovStart = rows.length + 1;

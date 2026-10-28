@@ -101,7 +101,7 @@ How a price is calculated:
 
 1. **Base cost per unit** = one line per group row (e.g. each filament spool) + the builder's other lines (electricity, labour…). See `baseLinesFor()` in `groups.ts`.
 2. `computeQuote()` adds raw materials and overheads, applies the profit method and rounding, then the order quantity, discount and tax.
-3. A **simple** quote (`inputs.simple`) prices only the core costs: `fieldsFor()` hides fields marked `detailed`, `extraLinesFor()` drops `detailed` base lines and `pricedInputs()` ignores overheads. The hidden values stay saved, so switching back to detailed restores them.
+3. A **simple** quote (`inputs.simple`) prices only the core costs: `fieldsFor()` hides fields marked `detailed`, `extraLinesFor()` drops `detailed` base lines and `pricedInputs()` swaps the overheads for the single `inputs.utilities` value (`simpleOverheads()`). The hidden values stay saved, so switching back to detailed restores them.
 4. The UI, every export and the spreadsheet read from the same result, so they always agree.
 5. A **client order** (`Product.orders`) stores only quote ids plus its own discount, tax, client and notes. `orderResult()` in `combined.ts` prices each quote with `resultFor()` and `combine()`s the lines, so orders always follow their quotes. `buildCombinedDoc()` / `buildCombinedSheet()` export it; `ExportModal` takes an `ExportSource` so quotes and orders share it.
 
