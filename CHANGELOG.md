@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.7.0](https://github.com/murtazapatel89100/ArchCalc/compare/archcalc-v1.6.1...archcalc-v1.7.0) (2026-10-28)
+
+
+### Features
+
+* **app:** add a combined utilities cost to simple quotes ([#26](https://github.com/murtazapatel89100/ArchCalc/issues/26)) ([e6395be](https://github.com/murtazapatel89100/ArchCalc/commit/e6395be0b57c876c2a91ec9e347199f3f2964f3a))
+
 ## [1.6.1](https://github.com/murtazapatel89100/ArchCalc/compare/archcalc-v1.6.0...archcalc-v1.6.1) (2026-10-26)
 
 
